@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}New Request | PaveFlow{% endblock %}
+{% block content %}
+<div class="form-panel mx-auto">
+    <h1>New Service Request</h1>
+    <p class="text-secondary">This form is a page sketch. Database saving comes in the next step.</p>
+    <form class="row g-3">
+        <div class="col-12"><label class="form-label">Property address</label><input class="form-control" placeholder="123 Main Street"></div>
+        <div class="col-md-6"><label class="form-label">City</label><input class="form-control"></div>
+        <div class="col-md-2"><label class="form-label">State</label><input class="form-control" value="IL"></div>
+        <div class="col-md-4"><label class="form-label">ZIP code</label><input class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">Project type</label><select class="form-select"><option>New driveway</option><option>Driveway replacement</option><option>Parking lot</option><option>Resurfacing</option></select></div>
+        <div class="col-md-6"><label class="form-label">Approximate square footage</label><input class="form-control" type="number"></div>
+        <div class="col-md-6"><label class="form-label">Pavement condition</label><select class="form-select"><option>Good</option><option>Fair</option><option>Poor</option></select></div>
+        <div class="col-md-6"><label class="form-label">Preferred inspection date</label><input class="form-control" type="date"></div>
+        <div class="col-12"><label class="form-label">Additional details</label><textarea class="form-control" rows="4"></textarea></div>
+        <div class="col-12"><button class="btn btn-warning" type="button">Submit request</button></div>
+    </form>
+</div>
+{% endblock %}

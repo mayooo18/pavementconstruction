@@ -1,0 +1,22 @@
+body {
+    background: #f4f2ed;
+    color: #212529;
+}
+
+.hero {
+    background: linear-gradient(135deg, #ffc107, #df8f00);
+    color: #171717;
+}
+
+.card,
+.form-panel {
+    background: #ffffff;
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+.form-panel {
+    max-width: 760px;
+    padding: 2rem;
+}

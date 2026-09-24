@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Home | PaveFlow{% endblock %}
+{% block content %}
+<section class="hero p-5 rounded-4">
+    <p class="text-uppercase fw-semibold mb-2">Pavement construction services</p>
+    <h1 class="display-5 fw-bold">Request asphalt work and follow your project.</h1>
+    <p class="lead col-lg-8">Customers can submit a service request. Staff can review requests and update their progress.</p>
+    <a class="btn btn-warning btn-lg" href="{{ url_for('request_form') }}">Start a request</a>
+</section>
+
+<div class="row g-4 mt-3">
+    <div class="col-md-4"><div class="card h-100 p-3"><h2 class="h5">1. Submit</h2><p>Tell the company about the property and requested work.</p></div></div>
+    <div class="col-md-4"><div class="card h-100 p-3"><h2 class="h5">2. Review</h2><p>Staff reviews the request and schedules an inspection.</p></div></div>
+    <div class="col-md-4"><div class="card h-100 p-3"><h2 class="h5">3. Track</h2><p>The customer checks the current request status.</p></div></div>
+</div>
+{% endblock %}
