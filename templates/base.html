@@ -12,10 +12,11 @@
         <div class="container">
             <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">PaveFlow</a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('services') }}">Services</a>
+                <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                <a class="nav-link" href="{{ url_for('contact') }}">Contact</a>
                 <a class="nav-link" href="{{ url_for('customer_dashboard') }}">Customer</a>
-                <a class="nav-link" href="{{ url_for('staff_dashboard') }}">Staff</a>
-                <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-            </div>
+                <a class="nav-link" href="{{ url_for('staff_dashboard') }}">Staff</a>            </div>
         </div>
     </nav>
 
