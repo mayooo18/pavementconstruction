@@ -8,8 +8,6 @@ db = SQLAlchemy()
 PROJECT_TYPES = ["New driveway", "Driveway replacement", "Parking lot", "Resurfacing"]
 PAVEMENT_CONDITIONS = ["Good", "Fair", "Poor"]
 REQUEST_STATUSES = ["Submitted", "Inspected", "Quoted", "Scheduled", "Completed", "Cancelled"]
-PROPOSAL_STATUSES = ["Sent", "Accepted", "Declined", "Expired"]
-CONTRACT_STATUSES = ["Draft", "Sent", "Signed", "Completed", "Cancelled"]
 
 
 class User(db.Model):
@@ -27,9 +25,6 @@ class User(db.Model):
     )
     service_requests = db.relationship(
         "ServiceRequest", back_populates="customer", cascade="all, delete-orphan"
-    )
-    contracts = db.relationship(
-        "Contract", back_populates="customer", cascade="all, delete-orphan"
     )
 
 
@@ -67,41 +62,3 @@ class ServiceRequest(db.Model):
 
     customer = db.relationship("User", back_populates="service_requests")
     property = db.relationship("Property", back_populates="service_requests")
-    proposals = db.relationship(
-        "Proposal", back_populates="service_request", cascade="all, delete-orphan"
-    )
-
-
-class Proposal(db.Model):
-    __tablename__ = "proposals"
-
-    id = db.Column(db.Integer, primary_key=True)
-    service_request_id = db.Column(
-        db.Integer, db.ForeignKey("service_requests.id"), nullable=False
-    )
-    # Empty until the proposal is added to a contract. A proposal can only be
-    # on one contract, but a contract can hold many proposals.
-    contract_id = db.Column(db.Integer, db.ForeignKey("contracts.id"), nullable=True)
-    price = db.Column(db.Numeric(10, 2), nullable=False)
-    estimated_hours = db.Column(db.Float, nullable=True)
-    status = db.Column(db.String(20), nullable=False, default="Sent")
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    accepted_at = db.Column(db.DateTime, nullable=True)
-
-    service_request = db.relationship("ServiceRequest", back_populates="proposals")
-    contract = db.relationship("Contract", back_populates="proposals")
-
-
-class Contract(db.Model):
-    __tablename__ = "contracts"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="Draft")
-    # Saved when the contract is created so later proposal changes can't alter it.
-    total_price = db.Column(db.Numeric(10, 2), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    signed_at = db.Column(db.DateTime, nullable=True)
-
-    customer = db.relationship("User", back_populates="contracts")
-    proposals = db.relationship("Proposal", back_populates="contract")

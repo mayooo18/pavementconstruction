@@ -5,7 +5,7 @@
 <p class="text-secondary">Review all customer requests and update their progress.</p>
 <div class="table-responsive card p-3">
     <table class="table align-middle mb-0">
-        <thead><tr><th>#</th><th>Submitted</th><th>Customer</th><th>Property</th><th>Project</th><th>Square feet</th><th>Condition</th><th>Inspection</th><th>Status</th><th>New proposal</th></tr></thead>
+        <thead><tr><th>#</th><th>Submitted</th><th>Customer</th><th>Property</th><th>Project</th><th>Square feet</th><th>Condition</th><th>Inspection</th><th>Status</th></tr></thead>
         <tbody>
             {% for req in requests %}
             <tr>
@@ -25,84 +25,9 @@
                         <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
                     </form>
                 </td>
-                <td>
-                    <form class="d-flex gap-2" method="post" action="{{ url_for('create_proposal', request_id=req.id) }}">
-                        <input class="form-control form-control-sm" type="number" name="price" min="0.01" step="0.01" placeholder="Price $" aria-label="Proposal price for request {{ req.id }}" required>
-                        <button class="btn btn-sm btn-outline-dark" type="submit">Add</button>
-                    </form>
-                </td>
             </tr>
             {% else %}
-            <tr><td colspan="10" class="text-center text-secondary py-4">No requests yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<h2 class="h4 mt-5">Proposals</h2>
-<p class="text-secondary">Select accepted proposals for the same customer to combine them into one contract.</p>
-<form id="create-contract" method="post" action="{{ url_for('create_contract') }}"></form>
-<div class="table-responsive card p-3">
-    <table class="table align-middle mb-0">
-        <thead><tr><th></th><th>#</th><th>Request</th><th>Customer</th><th>Project</th><th>Price</th><th>Contract</th><th>Status</th></tr></thead>
-        <tbody>
-            {% for proposal in proposals %}
-            {% set req = proposal.service_request %}
-            <tr>
-                <td>
-                    {% if proposal.status == "Accepted" and not proposal.contract %}
-                    <input class="form-check-input" type="checkbox" name="proposal_ids" value="{{ proposal.id }}" form="create-contract" aria-label="Add proposal {{ proposal.id }} to contract">
-                    {% endif %}
-                </td>
-                <td>{{ proposal.id }}</td>
-                <td>#{{ req.id }}</td>
-                <td>{{ req.customer.name }}<br><small class="text-secondary">{{ req.customer.email }}</small></td>
-                <td>{{ req.project_type }}<br><small class="text-secondary">{{ req.property.address }}</small></td>
-                <td>${{ "{:,.2f}".format(proposal.price) }}</td>
-                <td>
-                    {% if proposal.contract %}<a href="{{ url_for('contract_detail', contract_id=proposal.contract.id) }}">#{{ proposal.contract.id }}</a>{% else %}—{% endif %}
-                </td>
-                <td>
-                    {% if proposal.contract %}
-                    <span class="badge text-bg-secondary">{{ proposal.status }}</span>
-                    {% else %}
-                    <form class="d-flex gap-2" method="post" action="{{ url_for('update_proposal_status', proposal_id=proposal.id) }}">
-                        <select class="form-select form-select-sm" name="status" aria-label="Status for proposal {{ proposal.id }}">
-                            {% for status in proposal_statuses %}<option{% if status == proposal.status %} selected{% endif %}>{{ status }}</option>{% endfor %}
-                        </select>
-                        <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="8" class="text-center text-secondary py-4">No proposals yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% if proposals %}
-    <div class="mt-3">
-        <button class="btn btn-warning" type="submit" form="create-contract">Create contract from selected</button>
-    </div>
-    {% endif %}
-</div>
-
-<h2 class="h4 mt-5">Contracts</h2>
-<div class="table-responsive card p-3">
-    <table class="table align-middle mb-0">
-        <thead><tr><th>#</th><th>Created</th><th>Customer</th><th>Proposals</th><th>Total</th><th>Status</th></tr></thead>
-        <tbody>
-            {% for contract in contracts %}
-            <tr>
-                <td><a href="{{ url_for('contract_detail', contract_id=contract.id) }}">{{ contract.id }}</a></td>
-                <td>{{ contract.created_at.strftime("%b %d, %Y") }}</td>
-                <td>{{ contract.customer.name }}</td>
-                <td>{{ contract.proposals | length }}</td>
-                <td>${{ "{:,.2f}".format(contract.total_price) }}</td>
-                <td>{{ contract.status }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="6" class="text-center text-secondary py-4">No contracts yet.</td></tr>
+            <tr><td colspan="9" class="text-center text-secondary py-4">No requests yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>
