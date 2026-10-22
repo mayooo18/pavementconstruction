@@ -1,7 +1,7 @@
 import os
 from datetime import date
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from models import (
     PAVEMENT_CONDITIONS,
@@ -82,7 +82,25 @@ def create_app():
 
     @app.route("/customer/dashboard")
     def customer_dashboard():
-        return render_template("customer_dashboard.html")
+        # No login yet, so look the customer up by email (from the search box,
+        # or remembered from the last request they submitted).
+        email = request.args.get("email", "").strip().lower()
+        if email:
+            session["customer_email"] = email
+        else:
+            email = session.get("customer_email", "")
+
+        requests = []
+        if email:
+            user = User.query.filter_by(email=email).first()
+            if user is not None:
+                requests = (
+                    ServiceRequest.query.filter_by(customer=user)
+                    .order_by(ServiceRequest.created_at.desc())
+                    .all()
+                )
+
+        return render_template("customer_dashboard.html", email=email, requests=requests)
 
     @app.route("/customer/request/new", methods=["GET", "POST"])
     def request_form():
@@ -123,6 +141,7 @@ def create_app():
                 )
                 db.session.add(new_request)
                 db.session.commit()
+                session["customer_email"] = email
                 return redirect(url_for("request_submitted", request_id=new_request.id))
 
         # Show the form (empty the first time, or with the user's answers if there were errors).

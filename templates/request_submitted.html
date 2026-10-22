@@ -11,6 +11,7 @@
         <p class="col-md-6"><strong>Preferred inspection date:</strong><br>{{ req.preferred_inspection_date.strftime("%B %d, %Y") if req.preferred_inspection_date else "No preference" }}</p>
         <p class="col-md-6"><strong>Status:</strong><br><span class="badge text-bg-primary">{{ req.status }}</span></p>
     </div>
-    <a class="btn btn-warning" href="{{ url_for('home') }}">Back to home</a>
+    <a class="btn btn-warning" href="{{ url_for('customer_dashboard') }}">View my requests</a>
+    <a class="btn btn-outline-dark" href="{{ url_for('home') }}">Back to home</a>
 </div>
 {% endblock %}
