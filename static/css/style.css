@@ -20,3 +20,20 @@ body {
     max-width: 760px;
     padding: 2rem;
 }
+
+/* Keep table cells on one line so narrow screens scroll sideways instead of squishing columns */
+.dashboard-table th,
+.dashboard-table td {
+    white-space: nowrap;
+}
+
+.dashboard-table td.wrap {
+    white-space: normal;
+    min-width: 14rem;
+}
+
+@media (max-width: 575.98px) {
+    .form-panel {
+        padding: 1.25rem;
+    }
+}
