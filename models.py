@@ -5,6 +5,10 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+PROJECT_TYPES = ["New driveway", "Driveway replacement", "Parking lot", "Resurfacing"]
+PAVEMENT_CONDITIONS = ["Good", "Fair", "Poor"]
+REQUEST_STATUSES = ["Submitted", "Inspected", "Quoted", "Scheduled", "Completed", "Cancelled"]
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -12,7 +16,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
+    # Optional until login is added; customers are created from the request form.
+    password_hash = db.Column(db.String(255), nullable=True)
     role = db.Column(db.String(20), nullable=False, default="customer")
 
     properties = db.relationship(

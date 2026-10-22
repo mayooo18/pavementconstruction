@@ -5,8 +5,31 @@
 <p class="text-secondary">Review all customer requests and update their progress.</p>
 <div class="table-responsive card p-3">
     <table class="table align-middle mb-0">
-        <thead><tr><th>Customer</th><th>Project</th><th>Square feet</th><th>Status</th><th></th></tr></thead>
-        <tbody><tr><td>Sample Customer</td><td>Driveway replacement</td><td>2,300</td><td><span class="badge text-bg-primary">Submitted</span></td><td><button class="btn btn-sm btn-outline-dark" type="button">Review</button></td></tr></tbody>
+        <thead><tr><th>#</th><th>Submitted</th><th>Customer</th><th>Property</th><th>Project</th><th>Square feet</th><th>Condition</th><th>Inspection</th><th>Status</th></tr></thead>
+        <tbody>
+            {% for req in requests %}
+            <tr>
+                <td>{{ req.id }}</td>
+                <td>{{ req.created_at.strftime("%b %d, %Y") }}</td>
+                <td>{{ req.customer.name }}<br><small class="text-secondary">{{ req.customer.email }}</small></td>
+                <td>{{ req.property.address }}<br><small class="text-secondary">{{ req.property.city }}, {{ req.property.state }} {{ req.property.zip_code }}</small></td>
+                <td>{{ req.project_type }}{% if req.additional_details %}<br><small class="text-secondary">{{ req.additional_details }}</small>{% endif %}</td>
+                <td>{{ "{:,}".format(req.square_footage) }}</td>
+                <td>{{ req.pavement_condition }}</td>
+                <td>{{ req.preferred_inspection_date.strftime("%b %d, %Y") if req.preferred_inspection_date else "—" }}</td>
+                <td>
+                    <form class="d-flex gap-2" method="post" action="{{ url_for('update_request_status', request_id=req.id) }}">
+                        <select class="form-select form-select-sm" name="status" aria-label="Status for request {{ req.id }}">
+                            {% for status in statuses %}<option{% if status == req.status %} selected{% endif %}>{{ status }}</option>{% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="text-center text-secondary py-4">No requests yet.</td></tr>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 {% endblock %}

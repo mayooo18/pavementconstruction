@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Request Received | PaveFlow{% endblock %}
+{% block content %}
+<div class="form-panel mx-auto">
+    <h1>Request received</h1>
+    <p class="text-secondary">Thanks, {{ req.customer.name }}. Your request number is <strong>#{{ req.id }}</strong>. Our staff will review it and contact you at {{ req.customer.email }}.</p>
+    <div class="row">
+        <p class="col-md-6"><strong>Property:</strong><br>{{ req.property.address }}<br>{{ req.property.city }}, {{ req.property.state }} {{ req.property.zip_code }}</p>
+        <p class="col-md-6"><strong>Project:</strong><br>{{ req.project_type }}, {{ "{:,}".format(req.square_footage) }} sq ft</p>
+        <p class="col-md-6"><strong>Pavement condition:</strong><br>{{ req.pavement_condition }}</p>
+        <p class="col-md-6"><strong>Preferred inspection date:</strong><br>{{ req.preferred_inspection_date.strftime("%B %d, %Y") if req.preferred_inspection_date else "No preference" }}</p>
+        <p class="col-md-6"><strong>Status:</strong><br><span class="badge text-bg-primary">{{ req.status }}</span></p>
+    </div>
+    <a class="btn btn-warning" href="{{ url_for('home') }}">Back to home</a>
+</div>
+{% endblock %}
