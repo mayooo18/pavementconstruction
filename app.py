@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from models import (
+    CONTRACT_STATUSES,
     PAVEMENT_CONDITIONS,
     PROJECT_TYPES,
     PROPOSAL_STATUSES,
@@ -244,7 +245,43 @@ def create_app():
     @app.route("/staff/contract/<int:contract_id>")
     def contract_detail(contract_id):
         contract = db.get_or_404(Contract, contract_id)
-        return render_template("contract_detail.html", contract=contract)
+        return render_template(
+            "contract_detail.html", contract=contract, statuses=CONTRACT_STATUSES
+        )
+
+    @app.route("/staff/contract/<int:contract_id>/status", methods=["POST"])
+    def update_contract_status(contract_id):
+        contract = db.get_or_404(Contract, contract_id)
+        new_status = request.form.get("status")
+
+        if new_status not in CONTRACT_STATUSES or new_status == contract.status:
+            return redirect(url_for("contract_detail", contract_id=contract_id))
+        # Cancelled contracts have released their proposals, so they stay cancelled.
+        if contract.status == "Cancelled":
+            flash(f"Contract #{contract_id} is cancelled and can't be changed.", "danger")
+            return redirect(url_for("contract_detail", contract_id=contract_id))
+        if contract.status == "Completed" and new_status == "Cancelled":
+            flash(f"Contract #{contract_id} is completed and can't be cancelled.", "danger")
+            return redirect(url_for("contract_detail", contract_id=contract_id))
+
+        contract.status = new_status
+        if new_status == "Signed" and contract.signed_at is None:
+            contract.signed_at = datetime.utcnow()
+
+        if new_status == "Completed":
+            for proposal in contract.proposals:
+                proposal.service_request.status = "Completed"
+        elif new_status == "Cancelled":
+            # Release the proposals so they can go on a new contract.
+            released = len(contract.proposals)
+            for proposal in contract.proposals:
+                proposal.service_request.status = "Quoted"
+            contract.proposals = []
+            flash(f"{released} proposal(s) released and can go on a new contract.", "info")
+
+        db.session.commit()
+        flash(f"Contract #{contract_id} marked as {new_status}.", "success")
+        return redirect(url_for("contract_detail", contract_id=contract_id))
 
     return app
 

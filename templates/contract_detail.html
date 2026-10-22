@@ -4,7 +4,20 @@
 <div class="form-panel mx-auto">
     <h1>Contract #{{ contract.id }}</h1>
     <p class="text-secondary">Created {{ contract.created_at.strftime("%B %d, %Y") }} for {{ contract.customer.name }} ({{ contract.customer.email }}).</p>
-    <p><strong>Status:</strong> <span class="badge text-bg-primary">{{ contract.status }}</span></p>
+    {% if contract.status == "Cancelled" %}
+    <p><strong>Status:</strong> <span class="badge text-bg-secondary">Cancelled</span></p>
+    <p class="text-secondary">This contract was cancelled for ${{ "{:,.2f}".format(contract.total_price) }}. Its proposals were released and can go on a new contract.</p>
+    {% else %}
+    <form class="d-flex align-items-center gap-2 mb-2" method="post" action="{{ url_for('update_contract_status', contract_id=contract.id) }}">
+        <label class="fw-bold" for="contract-status">Status:</label>
+        <select class="form-select form-select-sm w-auto" id="contract-status" name="status">
+            {% for status in statuses %}<option{% if status == contract.status %} selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
+    </form>
+    <p class="text-secondary small">Cancelling releases this contract's proposals so they can go on a new contract.{% if contract.signed_at %} Signed {{ contract.signed_at.strftime("%B %d, %Y") }}.{% endif %}</p>
+    {% endif %}
+    {% if contract.proposals %}
     <div class="table-responsive">
         <table class="table align-middle">
             <thead><tr><th>Proposal</th><th>Project</th><th>Property</th><th class="text-end">Price</th></tr></thead>
@@ -22,6 +35,7 @@
             <tfoot><tr><th colspan="3">Total</th><th class="text-end">${{ "{:,.2f}".format(contract.total_price) }}</th></tr></tfoot>
         </table>
     </div>
+    {% endif %}
     <a class="btn btn-warning" href="{{ url_for('staff_dashboard') }}">Back to dashboard</a>
 </div>
 {% endblock %}
