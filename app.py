@@ -1,13 +1,17 @@
 import os
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from models import (
     PAVEMENT_CONDITIONS,
     PROJECT_TYPES,
+    PROPOSAL_STATUSES,
     REQUEST_STATUSES,
+    Contract,
     Property,
+    Proposal,
     ServiceRequest,
     User,
     db,
@@ -49,6 +53,25 @@ def check_form(form):
     inspection_date = form.get("preferred_inspection_date", "")
     if inspection_date and inspection_date < date.today().isoformat():
         errors.append("The inspection date can't be in the past.")
+
+    return errors
+
+
+def check_contract_proposals(proposals):
+    """Check that proposals can go on one contract and return a list of problems."""
+    if len(proposals) == 0:
+        return ["Select at least one accepted proposal."]
+
+    errors = []
+    for proposal in proposals:
+        if proposal.status != "Accepted":
+            errors.append(f"Proposal #{proposal.id} has not been accepted.")
+        if proposal.contract_id is not None:
+            errors.append(f"Proposal #{proposal.id} is already on contract #{proposal.contract_id}.")
+
+    customer_ids = {p.service_request.user_id for p in proposals}
+    if len(customer_ids) > 1:
+        errors.append("All proposals on a contract must belong to the same customer.")
 
     return errors
 
@@ -135,8 +158,15 @@ def create_app():
     def staff_dashboard():
         # Newest requests first.
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
+        proposals = Proposal.query.order_by(Proposal.created_at.desc()).all()
+        contracts = Contract.query.order_by(Contract.created_at.desc()).all()
         return render_template(
-            "staff_dashboard.html", requests=requests, statuses=REQUEST_STATUSES
+            "staff_dashboard.html",
+            requests=requests,
+            statuses=REQUEST_STATUSES,
+            proposals=proposals,
+            proposal_statuses=PROPOSAL_STATUSES,
+            contracts=contracts,
         )
 
     @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
@@ -150,6 +180,71 @@ def create_app():
             flash(f"Request #{request_id} marked as {new_status}.", "success")
 
         return redirect(url_for("staff_dashboard"))
+
+    @app.route("/staff/request/<int:request_id>/proposals", methods=["POST"])
+    def create_proposal(request_id):
+        service_request = db.get_or_404(ServiceRequest, request_id)
+
+        try:
+            price = Decimal(request.form.get("price", ""))
+        except InvalidOperation:
+            price = None
+        if price is None or not price.is_finite() or price <= 0:
+            flash("Enter a price greater than 0.", "danger")
+            return redirect(url_for("staff_dashboard"))
+
+        proposal = Proposal(
+            service_request=service_request, price=price.quantize(Decimal("0.01"))
+        )
+        service_request.status = "Quoted"
+        db.session.add(proposal)
+        db.session.commit()
+        flash(f"Proposal #{proposal.id} created for request #{request_id}.", "success")
+        return redirect(url_for("staff_dashboard"))
+
+    @app.route("/staff/proposal/<int:proposal_id>/status", methods=["POST"])
+    def update_proposal_status(proposal_id):
+        proposal = db.get_or_404(Proposal, proposal_id)
+        new_status = request.form.get("status")
+
+        # A proposal on a contract is locked so the contract stays accurate.
+        if proposal.contract_id is not None:
+            flash(f"Proposal #{proposal_id} is on contract #{proposal.contract_id} and can't be changed.", "danger")
+        elif new_status in PROPOSAL_STATUSES:
+            proposal.status = new_status
+            proposal.accepted_at = datetime.utcnow() if new_status == "Accepted" else None
+            db.session.commit()
+            flash(f"Proposal #{proposal_id} marked as {new_status}.", "success")
+
+        return redirect(url_for("staff_dashboard"))
+
+    @app.route("/staff/contracts", methods=["POST"])
+    def create_contract():
+        proposal_ids = request.form.getlist("proposal_ids", type=int)
+        proposals = Proposal.query.filter(Proposal.id.in_(proposal_ids)).all()
+
+        errors = check_contract_proposals(proposals)
+        if len(errors) > 0:
+            for error in errors:
+                flash(error, "danger")
+            return redirect(url_for("staff_dashboard"))
+
+        contract = Contract(
+            customer=proposals[0].service_request.customer,
+            total_price=sum(p.price for p in proposals),
+            proposals=proposals,
+        )
+        for proposal in proposals:
+            proposal.service_request.status = "Scheduled"
+        db.session.add(contract)
+        db.session.commit()
+        flash(f"Contract #{contract.id} created with {len(proposals)} proposal(s).", "success")
+        return redirect(url_for("contract_detail", contract_id=contract.id))
+
+    @app.route("/staff/contract/<int:contract_id>")
+    def contract_detail(contract_id):
+        contract = db.get_or_404(Contract, contract_id)
+        return render_template("contract_detail.html", contract=contract)
 
     return app
 
