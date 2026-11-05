@@ -1,28 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Contact | PaveFlow{% endblock %}
 {% block content %}
-<h1>Contact Us</h1>
-<p class="text-secondary">Questions about a project? Reach out and we'll get back to you.</p>
+<header class="page-head">
+    <div class="container">
+        <p class="eyebrow">Contact</p>
+        <h1>Questions about a project?</h1>
+        <p class="lead">Call, email or stop by the office. We'll get back to you within business hours.</p>
+    </div>
+</header>
 
-<div class="row g-4 mt-1">
-    <div class="col-md-4"><div class="card h-100 p-4">
-        <h2 class="h5">Phone</h2>
-        <p class="mb-0">(555) 123-4567</p>
-    </div></div>
-    <div class="col-md-4"><div class="card h-100 p-4">
-        <h2 class="h5">Email</h2>
-        <p class="mb-0">info@paveflow.example</p>
-    </div></div>
-    <div class="col-md-4"><div class="card h-100 p-4">
-        <h2 class="h5">Office</h2>
-        <p class="mb-0">123 Main Street<br>Chicago, IL 60601</p>
-    </div></div>
-</div>
+<section class="section-tight">
+    <div class="container">
+        <div class="contact-grid">
+            <div>
+                <p class="eyebrow">Phone</p>
+                <p class="contact-value"><a href="tel:5551234567">(555) 123-4567</a></p>
+            </div>
+            <div>
+                <p class="eyebrow">Email</p>
+                <p class="contact-value"><a href="mailto:info@paveflow.example">info@paveflow.example</a></p>
+            </div>
+            <div>
+                <p class="eyebrow">Office</p>
+                <p class="contact-value">123 Main Street<br>Chicago, IL 60601</p>
+            </div>
+        </div>
 
-<div class="card p-4 mt-4">
-    <h2 class="h5">Business hours</h2>
-    <p class="mb-0">Monday – Friday: 7:00 AM – 5:00 PM<br>Saturday: 8:00 AM – 12:00 PM<br>Sunday: Closed</p>
-</div>
+        <h2 class="h3 mt-5 mb-3">Business hours</h2>
+        <table class="hours">
+            <tr><td>Monday – Friday</td><td>7:00 AM – 5:00 PM</td></tr>
+            <tr><td>Saturday</td><td>8:00 AM – 12:00 PM</td></tr>
+            <tr><td>Sunday</td><td>Closed</td></tr>
+        </table>
+    </div>
+</section>
 
-<p class="mt-4">Ready to start? <a href="{{ url_for('request_form') }}">Submit a service request</a>.</p>
+<section class="closing section-sand">
+    <div class="container">
+        <h2>Ready to get started?</h2>
+        <p>Send a request with your project details, and we'll schedule a free inspection.</p>
+        <a class="btn btn-green" href="{{ url_for('request_form') }}">Submit a service request</a>
+    </div>
+</section>
 {% endblock %}

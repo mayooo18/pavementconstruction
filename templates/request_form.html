@@ -1,43 +1,75 @@
 {% extends "base.html" %}
-{% block title %}New Request | PaveFlow{% endblock %}
+{% block title %}Request an Inspection | PaveFlow{% endblock %}
 {% block content %}
-<div class="form-panel mx-auto">
-    <h1>New Service Request</h1>
-
-    {% if errors %}
-    <div class="alert alert-danger">
-        <p class="mb-1"><strong>Please fix these problems:</strong></p>
-        <ul class="mb-0">
-            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
-        </ul>
+<header class="page-head">
+    <div class="container">
+        <p class="eyebrow">Free inspection</p>
+        <h1>Tell us about your project</h1>
+        <p class="lead">Fill out the form and our staff will contact you to schedule an inspection. There's no cost and no commitment.</p>
     </div>
-    {% endif %}
+</header>
 
-    <form class="row g-3" method="post">
-        <div class="col-md-6"><label class="form-label">Your name</label><input class="form-control" name="name" value="{{ form.get('name', '') }}"></div>
-        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ form.get('email', '') }}"></div>
-        <div class="col-12"><label class="form-label">Property address</label><input class="form-control" name="address" placeholder="123 Main Street" value="{{ form.get('address', '') }}"></div>
-        <div class="col-md-6"><label class="form-label">City</label><input class="form-control" name="city" value="{{ form.get('city', '') }}"></div>
-        <div class="col-md-2"><label class="form-label">State</label><input class="form-control" name="state" maxlength="2" value="{{ form.get('state', 'IL') }}"></div>
-        <div class="col-md-4"><label class="form-label">ZIP code</label><input class="form-control" name="zip_code" value="{{ form.get('zip_code', '') }}"></div>
-        <div class="col-md-6"><label class="form-label">Project type</label>
-            <select class="form-select" name="project_type">
-                {% for option in project_types %}
-                <option {% if form.get('project_type') == option %}selected{% endif %}>{{ option }}</option>
-                {% endfor %}
-            </select>
+<div class="container">
+    <div class="form-sheet">
+        {% if errors %}
+        <div class="error-box" role="alert">
+            <strong>Please fix these problems:</strong>
+            <ul>
+                {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
         </div>
-        <div class="col-md-6"><label class="form-label">Approximate square footage</label><input class="form-control" name="square_footage" type="number" min="1" value="{{ form.get('square_footage', '') }}"></div>
-        <div class="col-md-6"><label class="form-label">Pavement condition</label>
-            <select class="form-select" name="pavement_condition">
-                {% for option in conditions %}
-                <option {% if form.get('pavement_condition') == option %}selected{% endif %}>{{ option }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-6"><label class="form-label">Preferred inspection date</label><input class="form-control" name="preferred_inspection_date" type="date" value="{{ form.get('preferred_inspection_date', '') }}"></div>
-        <div class="col-12"><label class="form-label">Additional details</label><textarea class="form-control" name="additional_details" rows="4">{{ form.get('additional_details', '') }}</textarea></div>
-        <div class="col-12"><button class="btn btn-warning" type="submit">Submit request</button></div>
-    </form>
+        {% endif %}
+
+        <form method="post">
+            <div class="form-section">
+                <h2>About you</h2>
+                <p class="section-note">So we know who to contact about the inspection.</p>
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label" for="name">Your name</label><input class="form-control" id="name" name="name" autocomplete="name" value="{{ form.get('name', '') }}"></div>
+                    <div class="col-md-6"><label class="form-label" for="email">Email</label><input class="form-control" id="email" name="email" type="email" autocomplete="email" value="{{ form.get('email', '') }}"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>The property</h2>
+                <p class="section-note">Where the work will be done.</p>
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label" for="address">Street address</label><input class="form-control" id="address" name="address" placeholder="123 Main Street" autocomplete="street-address" value="{{ form.get('address', '') }}"></div>
+                    <div class="col-md-6"><label class="form-label" for="city">City</label><input class="form-control" id="city" name="city" autocomplete="address-level2" value="{{ form.get('city', '') }}"></div>
+                    <div class="col-5 col-md-2"><label class="form-label" for="state">State</label><input class="form-control" id="state" name="state" maxlength="2" value="{{ form.get('state', 'IL') }}"></div>
+                    <div class="col-7 col-md-4"><label class="form-label" for="zip_code">ZIP code</label><input class="form-control" id="zip_code" name="zip_code" inputmode="numeric" autocomplete="postal-code" value="{{ form.get('zip_code', '') }}"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>The project</h2>
+                <p class="section-note">A rough idea is fine. We'll measure everything at the inspection.</p>
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label" for="project_type">Project type</label>
+                        <select class="form-select" id="project_type" name="project_type">
+                            {% for option in project_types %}
+                            <option {% if form.get('project_type') == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6"><label class="form-label" for="square_footage">Approximate square footage</label><input class="form-control" id="square_footage" name="square_footage" type="number" min="1" placeholder="For example, 800" value="{{ form.get('square_footage', '') }}"></div>
+                    <div class="col-md-6"><label class="form-label" for="pavement_condition">Current pavement condition</label>
+                        <select class="form-select" id="pavement_condition" name="pavement_condition">
+                            {% for option in conditions %}
+                            <option {% if form.get('pavement_condition') == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6"><label class="form-label" for="preferred_inspection_date">Preferred inspection date</label><input class="form-control" id="preferred_inspection_date" name="preferred_inspection_date" type="date" value="{{ form.get('preferred_inspection_date', '') }}"></div>
+                    <div class="col-12"><label class="form-label" for="additional_details">Anything else we should know?</label><textarea class="form-control" id="additional_details" name="additional_details" rows="4" placeholder="Cracks, drainage problems, a deadline, gate codes...">{{ form.get('additional_details', '') }}</textarea></div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-green" type="submit">Send my request</button>
+                <span class="muted">We'll reply by email.</span>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

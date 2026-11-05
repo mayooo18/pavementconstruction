@@ -4,46 +4,62 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}PaveFlow{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    {# A navbar link gets the "active" class when you're on that page. #}
+    {% set links = [
+        ("services", "Services"),
+        ("faq", "FAQ"),
+        ("about", "About"),
+        ("contact", "Contact"),
+        ("customer_dashboard", "My requests"),
+        ("staff_dashboard", "Staff"),
+    ] %}
+    <nav class="site-nav navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">PaveFlow</a>
+            <a class="brand" href="{{ url_for('home') }}">PaveFlow<span>.</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="{{ url_for('services') }}">Services</a>
-                    <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
-                    <a class="nav-link" href="{{ url_for('about') }}">About</a>
-                    <a class="nav-link" href="{{ url_for('contact') }}">Contact</a>
-                    <a class="nav-link" href="{{ url_for('customer_dashboard') }}">Customer</a>
-                    <a class="nav-link" href="{{ url_for('staff_dashboard') }}">Staff</a>
+                <div class="navbar-nav ms-auto align-items-lg-center">
+                    {% for endpoint, text in links %}
+                    <a class="nav-link{% if request.endpoint == endpoint %} active{% endif %}" href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ text }}</a>
+                    {% endfor %}
+                    <a class="nav-phone ms-lg-3" href="tel:5551234567">(555) 123-4567</a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="{% block main_class %}container{% endblock %} py-5">
-        {% for category, message in get_flashed_messages(with_categories=true) %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="{% block flash_class %}container{% endblock %}">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="site-footer bg-dark text-light py-5">
+    <footer class="site-footer">
         <div class="container">
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <h2 class="h5 fw-bold">PaveFlow</h2>
-                    <p class="text-white-50 mb-0">Asphalt paving for homes and businesses.</p>
+            <div class="row g-4 g-lg-5">
+                <div class="col-lg-5">
+                    <a class="brand" href="{{ url_for('home') }}">PaveFlow<span>.</span></a>
+                    <p class="mt-3 mb-0">Asphalt driveways, parking lots and resurfacing for Chicago and the surrounding suburbs.</p>
                 </div>
-                <div class="col-md-4">
-                    <h2 class="h6 text-uppercase">Pages</h2>
-                    <ul class="list-unstyled mb-0">
+                <div class="col-sm-6 col-lg-3">
+                    <h2>Pages</h2>
+                    <ul>
                         <li><a href="{{ url_for('services') }}">Services</a></li>
                         <li><a href="{{ url_for('faq') }}">FAQ</a></li>
                         <li><a href="{{ url_for('about') }}">About</a></li>
@@ -51,17 +67,17 @@
                         <li><a href="{{ url_for('request_form') }}">Request an inspection</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
-                    <h2 class="h6 text-uppercase">Contact</h2>
-                    <p class="text-white-50 mb-0">
-                        (555) 123-4567<br>
-                        info@paveflow.example<br>
-                        123 Main Street, Chicago, IL 60601<br>
-                        Mon – Fri 7 AM – 5 PM, Sat 8 AM – 12 PM
-                    </p>
+                <div class="col-sm-6 col-lg-4">
+                    <h2>Get in touch</h2>
+                    <ul>
+                        <li><a href="tel:5551234567">(555) 123-4567</a></li>
+                        <li><a href="mailto:info@paveflow.example">info@paveflow.example</a></li>
+                        <li>123 Main Street, Chicago, IL 60601</li>
+                        <li>Mon – Fri 7 AM – 5 PM, Sat 8 AM – 12 PM</li>
+                    </ul>
                 </div>
             </div>
-            <p class="text-white-50 small mt-4 mb-0">&copy; {{ current_year }} PaveFlow</p>
+            <div class="footer-base">&copy; {{ current_year }} PaveFlow. All rights reserved.</div>
         </div>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

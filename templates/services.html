@@ -1,33 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Services | PaveFlow{% endblock %}
 {% block content %}
-<h1>Our Services</h1>
-<p class="text-secondary">We handle asphalt work for homes and businesses.</p>
+<header class="page-head">
+    <div class="container">
+        <p class="eyebrow">Services</p>
+        <h1>Asphalt work for homes and businesses</h1>
+        <p class="lead">Every job starts with a free inspection, so you know exactly what your pavement needs before any work begins.</p>
+    </div>
+</header>
 
-<div class="row g-4 mt-1">
-    <div class="col-md-6"><div class="card h-100 p-4">
-        <h2 class="h5">New driveway</h2>
-        <p>We prepare the ground, lay a gravel base, and pave a brand-new asphalt driveway.</p>
-        <p class="text-secondary mb-0">Usually takes 1–2 days.</p>
-    </div></div>
-    <div class="col-md-6"><div class="card h-100 p-4">
-        <h2 class="h5">Driveway replacement</h2>
-        <p>We tear out an old, cracked driveway and replace it with fresh asphalt.</p>
-        <p class="text-secondary mb-0">Usually takes 2–3 days.</p>
-    </div></div>
-    <div class="col-md-6"><div class="card h-100 p-4">
-        <h2 class="h5">Parking lot</h2>
-        <p>Paving, repairs, and line striping for business and church parking lots.</p>
-        <p class="text-secondary mb-0">Time depends on the size of the lot.</p>
-    </div></div>
-    <div class="col-md-6"><div class="card h-100 p-4">
-        <h2 class="h5">Resurfacing</h2>
-        <p>We add a new top layer of asphalt over pavement that is worn but still solid underneath.</p>
-        <p class="text-secondary mb-0">Usually takes 1 day.</p>
-    </div></div>
-</div>
+<section class="section-tight">
+    <div class="container">
+        <div class="line-grid">
+            <div>
+                <h3>New driveway</h3>
+                <p>We prepare the ground, lay a gravel base, and pave a brand-new asphalt driveway.</p>
+                <p class="detail">Usually takes 1–2 days</p>
+            </div>
+            <div>
+                <h3>Driveway replacement</h3>
+                <p>We tear out an old, cracked driveway and replace it with fresh asphalt.</p>
+                <p class="detail">Usually takes 2–3 days</p>
+            </div>
+            <div>
+                <h3>Parking lot</h3>
+                <p>Paving, repairs, and line striping for business and church parking lots.</p>
+                <p class="detail">Time depends on the size of the lot</p>
+            </div>
+            <div>
+                <h3>Resurfacing</h3>
+                <p>We add a new top layer of asphalt over pavement that is worn but still solid underneath.</p>
+                <p class="detail">Usually takes 1 day</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-<div class="text-center mt-5">
-    <a class="btn btn-warning btn-lg" href="{{ url_for('request_form') }}">Request a free inspection</a>
-</div>
+<section class="closing section-sand">
+    <div class="container">
+        <h2>Not sure which one you need?</h2>
+        <p>That's what the inspection is for. We'll look at your pavement and recommend the right fix.</p>
+        <a class="btn btn-green" href="{{ url_for('request_form') }}">Request a free inspection</a>
+    </div>
+</section>
 {% endblock %}

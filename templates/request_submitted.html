@@ -1,17 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Request Received | PaveFlow{% endblock %}
 {% block content %}
-<div class="form-panel mx-auto">
-    <h1>Request received</h1>
-    <p class="text-secondary">Thanks, {{ req.customer.name }}. Your request number is <strong>#{{ req.id }}</strong>. Our staff will review it and contact you at {{ req.customer.email }}.</p>
-    <div class="row">
-        <p class="col-md-6"><strong>Property:</strong><br>{{ req.property.address }}<br>{{ req.property.city }}, {{ req.property.state }} {{ req.property.zip_code }}</p>
-        <p class="col-md-6"><strong>Project:</strong><br>{{ req.project_type }}, {{ "{:,}".format(req.square_footage) }} sq ft</p>
-        <p class="col-md-6"><strong>Pavement condition:</strong><br>{{ req.pavement_condition }}</p>
-        <p class="col-md-6"><strong>Preferred inspection date:</strong><br>{{ req.preferred_inspection_date.strftime("%B %d, %Y") if req.preferred_inspection_date else "No preference" }}</p>
-        <p class="col-md-6"><strong>Status:</strong><br><span class="badge text-bg-primary">{{ req.status }}</span></p>
+<section class="section">
+    <div class="container">
+        <div class="form-sheet">
+            <div class="done-mark" aria-hidden="true">✓</div>
+            <h1>Thanks, {{ req.customer.name }}. We got your request.</h1>
+            <p class="lead mt-3">Our staff will review it and contact you at <strong>{{ req.customer.email }}</strong> to schedule your inspection.</p>
+
+            <div class="ballpark mt-5">
+                <p class="eyebrow mb-1">Ballpark estimate</p>
+                <p class="ballpark-hours">About {{ ballpark }} work hour{{ "" if ballpark == 1 else "s" }}</p>
+                <p class="muted mb-0">Based on typical {{ req.project_type|lower }} jobs of about {{ "{:,}".format(req.square_footage) }} sq ft in {{ req.pavement_condition|lower }} condition. Your exact estimate comes after the inspection, once we've measured and checked the pavement.</p>
+            </div>
+
+            <div class="request-card mt-4">
+                <div class="request-card-head">
+                    <h2>Request #{{ req.id }}</h2>
+                    <span class="status status-{{ req.status|lower }}">{{ req.status }}</span>
+                </div>
+                <dl class="details">
+                    <div><dt>Property</dt><dd>{{ req.property.address }}<br>{{ req.property.city }}, {{ req.property.state }} {{ req.property.zip_code }}</dd></div>
+                    <div><dt>Project</dt><dd>{{ req.project_type }}<br>{{ "{:,}".format(req.square_footage) }} sq ft</dd></div>
+                    <div><dt>Pavement condition</dt><dd>{{ req.pavement_condition }}</dd></div>
+                    <div><dt>Preferred inspection</dt><dd>{{ req.preferred_inspection_date.strftime("%B %d, %Y") if req.preferred_inspection_date else "No preference" }}</dd></div>
+                </dl>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-3 mt-4">
+                <a class="btn btn-green" href="{{ url_for('customer_dashboard') }}">View my requests</a>
+                <a class="arrow-link" href="{{ url_for('home') }}">Back to home</a>
+            </div>
+        </div>
     </div>
-    <a class="btn btn-warning" href="{{ url_for('customer_dashboard') }}">View my requests</a>
-    <a class="btn btn-outline-dark" href="{{ url_for('home') }}">Back to home</a>
-</div>
+</section>
 {% endblock %}

@@ -61,6 +61,9 @@ class ServiceRequest(db.Model):
     # Staff fill these in after the inspection so the model can estimate work hours.
     thickness = db.Column(db.Float, nullable=True)
     crew_size = db.Column(db.Integer, nullable=True)
+    # How long the job really took. Staff enter it when the job is Completed,
+    # and it becomes training data for the work hours model.
+    actual_hours = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     customer = db.relationship("User", back_populates="service_requests")

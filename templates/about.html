@@ -1,19 +1,34 @@
 {% extends "base.html" %}
 {% block title %}About | PaveFlow{% endblock %}
 {% block content %}
-<div class="form-panel mx-auto">
-    <h1>About PaveFlow</h1>
-    <p>PaveFlow is a local pavement construction company in Illinois. We pave driveways, parking lots, and other asphalt surfaces for homeowners and businesses.</p>
-    <p>Our goal is simple: do quality work, show up when we say we will, and keep customers updated from the first inspection to the finished job.</p>
+<header class="page-head">
+    <div class="container">
+        <p class="eyebrow">About us</p>
+        <h1>A local paving company that shows up when we say we will</h1>
+    </div>
+</header>
 
-    <h2 class="h4 mt-4">Why choose us</h2>
-    <ul>
-        <li>Free inspections and quotes</li>
-        <li>Experienced, insured crews</li>
-        <li>Track your request status online</li>
-    </ul>
-
-    <h2 class="h4 mt-4">Service area</h2>
-    <p class="mb-0">We serve Chicago and the surrounding suburbs.</p>
-</div>
+<section class="section">
+    <div class="container">
+        <div class="row g-4 g-lg-5">
+            <div class="col-lg-7 prose">
+                <p>PaveFlow is a local pavement construction company in Illinois. We pave driveways, parking lots, and other asphalt surfaces for homeowners and businesses.</p>
+                <p>Our goal is simple: do quality work, show up when we say we will, and keep customers updated from the first inspection to the finished job.</p>
+                <a class="arrow-link" href="{{ url_for('services') }}">See what we do</a>
+            </div>
+            <div class="col-lg-5">
+                <div class="box-sand">
+                    <h2 class="h3">Why choose us</h2>
+                    <ul class="check-list mt-3">
+                        <li>Free inspections and quotes</li>
+                        <li>Experienced, insured crews</li>
+                        <li>Track your request status online</li>
+                    </ul>
+                    <h2 class="h3 mt-4">Service area</h2>
+                    <p class="mb-0 muted">We serve Chicago and the surrounding suburbs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}
