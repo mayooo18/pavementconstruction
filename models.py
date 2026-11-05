@@ -58,6 +58,9 @@ class ServiceRequest(db.Model):
     preferred_inspection_date = db.Column(db.Date, nullable=True)
     additional_details = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(30), nullable=False, default="Submitted")
+    # Staff fill these in after the inspection so the model can estimate work hours.
+    thickness = db.Column(db.Float, nullable=True)
+    crew_size = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     customer = db.relationship("User", back_populates="service_requests")

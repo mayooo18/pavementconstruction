@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}FAQ | PaveFlow{% endblock %}
+{% block content %}
+<h1>Frequently Asked Questions</h1>
+<p class="text-secondary">Answers to the questions customers ask us most.</p>
+
+<div class="accordion mt-4" id="faqList">
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">How long does an asphalt driveway last?</button>
+        </h2>
+        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqList">
+            <div class="accordion-body">With good care, an asphalt driveway usually lasts 15 to 20 years. Sealcoating every few years and fixing cracks early helps it last longer.</div>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">When can I drive on my new driveway?</button>
+        </h2>
+        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqList">
+            <div class="accordion-body">You can usually walk on it after 1 day and drive on it after 2 to 3 days. In hot weather it may need a little longer to harden.</div>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">What time of year is best for paving?</button>
+        </h2>
+        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqList">
+            <div class="accordion-body">Late spring through early fall. Asphalt needs warm, dry weather to set properly, so we don't pave when it's freezing or raining.</div>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">Should I resurface or replace my driveway?</button>
+        </h2>
+        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqList">
+            <div class="accordion-body">If the base underneath is still solid and the damage is mostly on top, resurfacing is usually enough. If there are deep cracks, potholes or sinking spots, it's usually better to replace it. We'll tell you which one you need during the inspection.</div>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">Is the inspection free?</button>
+        </h2>
+        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqList">
+            <div class="accordion-body">Yes. We come out, measure the area, check the condition of the pavement, and then send you a quote.</div>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">How do I check on my request?</button>
+        </h2>
+        <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqList">
+            <div class="accordion-body">Go to the <a href="{{ url_for('customer_dashboard') }}">Customer</a> page and enter the email you used on the request form. You'll see each request and its status.</div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-5">
+    <a class="btn btn-warning btn-lg" href="{{ url_for('request_form') }}">Request a free inspection</a>
+</div>
+{% endblock %}

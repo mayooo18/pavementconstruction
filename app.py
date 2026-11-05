@@ -1,6 +1,8 @@
 import os
 from datetime import date
 
+import joblib
+import pandas as pd
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from models import (
@@ -12,6 +14,43 @@ from models import (
     User,
     db,
 )
+
+
+# Load the work hours model once, when the app starts.
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "work_hours_model.joblib")
+work_hours_model = joblib.load(MODEL_PATH)
+
+# The model was trained with numbers instead of words (see the notebook).
+TYPE_NUMBERS = {"New driveway": 1, "Driveway replacement": 2, "Parking lot": 3, "Resurfacing": 4}
+CONDITION_NUMBERS = {"Good": 1, "Fair": 2, "Poor": 3}
+
+
+def estimate_hours(service_request):
+    """Return the model's estimated work hours, or None if staff haven't entered thickness and crew size."""
+    if service_request.thickness is None or service_request.crew_size is None:
+        return None
+
+    project = pd.DataFrame([{
+        "square_footage": service_request.square_footage,
+        "thickness": service_request.thickness,
+        "crew_size": service_request.crew_size,
+        "type_number": TYPE_NUMBERS[service_request.project_type],
+        "condition_number": CONDITION_NUMBERS[service_request.pavement_condition],
+    }])
+    guess = work_hours_model.predict(project)[0]
+    return round(guess, 1)
+
+
+def add_missing_columns():
+    """Databases made before thickness and crew size existed don't have those columns, so add them."""
+    rows = db.session.execute(db.text("PRAGMA table_info(service_requests)")).fetchall()
+    column_names = [row[1] for row in rows]
+
+    if "thickness" not in column_names:
+        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN thickness FLOAT"))
+    if "crew_size" not in column_names:
+        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN crew_size INTEGER"))
+    db.session.commit()
 
 
 def check_form(form):
@@ -63,6 +102,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        add_missing_columns()
 
     @app.route("/")
     def home():
@@ -79,6 +119,15 @@ def create_app():
     @app.route("/contact")
     def contact():
         return render_template("contact.html")
+
+    @app.route("/faq")
+    def faq():
+        return render_template("faq.html")
+
+    # Lets every page use {{ current_year }}, for the footer.
+    @app.context_processor
+    def add_current_year():
+        return {"current_year": date.today().year}
 
     @app.route("/customer/dashboard")
     def customer_dashboard():
@@ -162,9 +211,44 @@ def create_app():
     def staff_dashboard():
         # Newest requests first.
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
+        # Work out the estimate for each request, if staff have entered the details.
+        estimates = {}
+        for service_request in requests:
+            estimates[service_request.id] = estimate_hours(service_request)
+
         return render_template(
-            "staff_dashboard.html", requests=requests, statuses=REQUEST_STATUSES
+            "staff_dashboard.html",
+            requests=requests,
+            statuses=REQUEST_STATUSES,
+            estimates=estimates,
         )
+
+    @app.route("/staff/request/<int:request_id>/estimate", methods=["POST"])
+    def update_request_estimate(request_id):
+        service_request = db.get_or_404(ServiceRequest, request_id)
+        thickness = request.form.get("thickness", "").strip()
+        crew_size = request.form.get("crew_size", "").strip()
+
+        # Thickness can have a decimal, like 2.5. Crew size must be a whole number.
+        try:
+            thickness = float(thickness)
+        except ValueError:
+            thickness = 0
+
+        if thickness < 0.5 or thickness > 12:
+            flash(f"Request #{request_id}: thickness must be a number from 0.5 to 12 inches.", "danger")
+        elif not crew_size.isdigit() or int(crew_size) < 1 or int(crew_size) > 20:
+            flash(f"Request #{request_id}: crew size must be a whole number from 1 to 20.", "danger")
+        else:
+            service_request.thickness = thickness
+            service_request.crew_size = int(crew_size)
+            db.session.commit()
+            flash(
+                f"Request #{request_id}: estimated {estimate_hours(service_request)} work hours.",
+                "success",
+            )
+
+        return redirect(url_for("staff_dashboard"))
 
     @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
     def update_request_status(request_id):
