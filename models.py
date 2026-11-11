@@ -1,6 +1,8 @@
 from datetime import datetime
 
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 db = SQLAlchemy()
@@ -10,13 +12,15 @@ PAVEMENT_CONDITIONS = ["Good", "Fair", "Poor"]
 REQUEST_STATUSES = ["Submitted", "Inspected", "Quoted", "Scheduled", "Completed", "Cancelled"]
 
 
-class User(db.Model):
+# UserMixin gives the User class what Flask-Login needs to log people in.
+class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    # Optional until login is added; customers are created from the request form.
+    # Customers from before login existed don't have a password yet,
+    # so this can be empty. They set one the next time they send a request.
     password_hash = db.Column(db.String(255), nullable=True)
     role = db.Column(db.String(20), nullable=False, default="customer")
 
@@ -26,6 +30,19 @@ class User(db.Model):
     service_requests = db.relationship(
         "ServiceRequest", back_populates="customer", cascade="all, delete-orphan"
     )
+
+    def set_password(self, password):
+        # Never save the real password. Save a scrambled version (a "hash") instead.
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        # True if the password matches the saved hash.
+        if self.password_hash is None:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    def is_staff(self):
+        return self.role == "staff"
 
 
 class Property(db.Model):

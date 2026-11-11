@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Log In | PaveFlow{% endblock %}
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="login-box">
+            <p class="eyebrow">Your account</p>
+            <h1 class="h2">Log in</h1>
+            <p class="muted">Customers can see their requests. Staff can manage every request.</p>
+
+            {% if error %}
+            <div class="error-box mt-3" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" class="mt-4">
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email</label>
+                    <input class="form-control" id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+                </div>
+                <button class="btn btn-green w-100" type="submit">Log in</button>
+            </form>
+
+            <p class="muted small mt-4 mb-0">New here? You'll make an account when you <a href="{{ url_for('request_form') }}">send your first request</a>.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -4,12 +4,8 @@
 <header class="page-head">
     <div class="container">
         <p class="eyebrow">My requests</p>
-        <h1>Check on your project</h1>
-        <p class="lead">Enter the email you used on the request form to see each request and where it stands.</p>
-        <form class="lookup mt-4" method="get" action="{{ url_for('customer_dashboard') }}">
-            <input class="form-control" type="email" name="email" value="{{ email }}" placeholder="you@example.com" aria-label="Email" required>
-            <button class="btn btn-green text-nowrap" type="submit">Show requests</button>
-        </form>
+        <h1>Hi, {{ current_user.name }}</h1>
+        <p class="lead">Here's each request you've sent and where it stands.</p>
     </div>
 </header>
 
@@ -32,7 +28,7 @@
         </div>
         {% else %}
         <div class="box-sand muted">
-            {% if email %}No requests found for {{ email }}. Check the spelling, or <a href="{{ url_for('request_form') }}">send a new request</a>.{% else %}Your requests will show up here.{% endif %}
+            You haven't sent any requests yet. <a href="{{ url_for('request_form') }}">Send your first request</a>.
         </div>
         {% endfor %}
 

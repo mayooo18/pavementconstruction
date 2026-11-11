@@ -17,9 +17,13 @@
         ("faq", "FAQ"),
         ("about", "About"),
         ("contact", "Contact"),
-        ("customer_dashboard", "My requests"),
-        ("staff_dashboard", "Staff"),
     ] %}
+    {# Logged-in people also get a link to their own page. #}
+    {% if current_user.is_authenticated and current_user.is_staff() %}
+        {% set links = links + [("staff_dashboard", "Staff dashboard")] %}
+    {% elif current_user.is_authenticated %}
+        {% set links = links + [("customer_dashboard", "My requests")] %}
+    {% endif %}
     <nav class="site-nav navbar navbar-expand-lg">
         <div class="container">
             <a class="brand" href="{{ url_for('home') }}">PaveFlow<span>.</span></a>
@@ -31,6 +35,15 @@
                     {% for endpoint, text in links %}
                     <a class="nav-link{% if request.endpoint == endpoint %} active{% endif %}" href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ text }}</a>
                     {% endfor %}
+                    {% if current_user.is_authenticated %}
+                    {# Logging out changes something, so it's a small form instead of a plain link. #}
+                    <form class="nav-account" method="post" action="{{ url_for('logout') }}">
+                        <span class="muted small">{{ current_user.name }}</span>
+                        <button class="btn btn-sm btn-outline" type="submit">Log out</button>
+                    </form>
+                    {% else %}
+                    <a class="nav-link{% if request.endpoint == 'login' %} active{% endif %}" href="{{ url_for('login') }}">Log in</a>
+                    {% endif %}
                     <a class="nav-phone ms-lg-3" href="tel:5551234567">(555) 123-4567</a>
                 </div>
             </div>

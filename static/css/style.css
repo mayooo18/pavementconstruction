@@ -141,6 +141,24 @@ h3 {
     font-weight: 600;
 }
 
+/* Name and Log out button in the navbar */
+.nav-account {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: 0.85rem;
+}
+
+/* Log in page */
+.login-box {
+    max-width: 26rem;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 2.25rem;
+}
+
 .nav-phone {
     color: var(--ink);
     font-weight: 600;
@@ -570,6 +588,12 @@ a.line-item:hover h3 {
     color: var(--green-dark);
 }
 
+.alert-info {
+    border-color: #c8d4df;
+    background: #eef3f7;
+    color: #2f4a63;
+}
+
 .alert-danger {
     border-color: #e6c3bf;
     background: #fbefed;
@@ -854,6 +878,10 @@ a.line-item:hover h3 {
     .nav-phone {
         display: inline-block;
         padding: 0.4rem 0.85rem;
+    }
+
+    .nav-account {
+        margin: 0.5rem 0.85rem;
     }
 }
 

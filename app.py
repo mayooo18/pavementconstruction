@@ -1,9 +1,11 @@
 import os
 from datetime import date
+from getpass import getpass
 
 import joblib
 import pandas as pd
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 
 from models import (
     PAVEMENT_CONDITIONS,
@@ -89,19 +91,30 @@ def add_missing_columns():
     db.session.commit()
 
 
-def check_form(form):
+def check_form(form, logged_in):
     """Check the request form and return a list of problems (empty if it's fine)."""
     errors = []
 
     # These fields must be filled in.
-    required = ["name", "email", "address", "city", "state", "zip_code", "square_footage"]
+    required = ["address", "city", "state", "zip_code", "square_footage"]
+    # People who aren't logged in also make an account with this form.
+    if not logged_in:
+        required = ["name", "email", "password"] + required
+
     for field in required:
         if form.get(field, "").strip() == "":
             errors.append(field.replace("_", " ").capitalize() + " is required.")
 
-    email = form.get("email", "")
-    if email and ("@" not in email or "." not in email):
-        errors.append("Enter a valid email address.")
+    if not logged_in:
+        email = form.get("email", "")
+        if email and ("@" not in email or "." not in email):
+            errors.append("Enter a valid email address.")
+
+        password = form.get("password", "")
+        if password and len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
+        if password != form.get("confirm_password", ""):
+            errors.append("The two passwords don't match.")
 
     state = form.get("state", "")
     if state and (len(state) != 2 or not state.isalpha()):
@@ -140,6 +153,81 @@ def create_app():
         db.create_all()
         add_missing_columns()
 
+    # ---------- Logging in ----------
+    login_manager = LoginManager()
+    login_manager.login_view = "login"  # where to send people who need to log in
+    login_manager.login_message = "Please log in to see that page."
+    login_manager.login_message_category = "info"
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        # Flask-Login remembers who is logged in by their id. This turns the id back into a User.
+        return db.session.get(User, int(user_id))
+
+    def block_non_staff():
+        """Staff pages call this first. It sends anyone who isn't staff to the login page."""
+        if current_user.is_authenticated and current_user.is_staff():
+            return None
+        flash("Please log in with a staff account to see that page.", "danger")
+        return redirect(url_for("login"))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        error = None
+        email = ""
+
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            user = User.query.filter_by(email=email).first()
+
+            if user is not None and user.check_password(password):
+                login_user(user)
+                flash(f"Welcome back, {user.name}.", "success")
+
+                # Go back to the page they were trying to open, if there was one.
+                # It must start with "/" so nobody can send people to another website.
+                next_page = request.args.get("next", "")
+                if next_page.startswith("/") and not next_page.startswith("//"):
+                    return redirect(next_page)
+                if user.is_staff():
+                    return redirect(url_for("staff_dashboard"))
+                return redirect(url_for("customer_dashboard"))
+
+            error = "That email and password don't match an account."
+
+        return render_template("login.html", error=error, email=email)
+
+    @app.route("/logout", methods=["POST"])
+    def logout():
+        logout_user()
+        flash("You're logged out.", "success")
+        return redirect(url_for("home"))
+
+    @app.cli.command("create-staff")
+    def create_staff():
+        """Make a staff account from the terminal: flask --app app:create_app create-staff"""
+        name = input("Name: ").strip()
+        email = input("Email: ").strip().lower()
+        password = getpass("Password (at least 8 characters): ")
+
+        if name == "" or "@" not in email:
+            print("Enter a name and a valid email.")
+            return
+        if len(password) < 8:
+            print("The password must be at least 8 characters.")
+            return
+
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            user = User(name=name, email=email)
+            db.session.add(user)
+        user.role = "staff"
+        user.set_password(password)
+        db.session.commit()
+        print(f"Staff account ready for {email}. Log in at /login.")
+
     @app.route("/")
     def home():
         return render_template("home.html")
@@ -166,43 +254,56 @@ def create_app():
         return {"current_year": date.today().year}
 
     @app.route("/customer/dashboard")
+    @login_required
     def customer_dashboard():
-        # No login yet, so look the customer up by email (from the search box,
-        # or remembered from the last request they submitted).
-        email = request.args.get("email", "").strip().lower()
-        if email:
-            session["customer_email"] = email
-        else:
-            email = session.get("customer_email", "")
+        # Staff don't have requests of their own, so send them to their page.
+        if current_user.is_staff():
+            return redirect(url_for("staff_dashboard"))
 
-        requests = []
-        if email:
-            user = User.query.filter_by(email=email).first()
-            if user is not None:
-                requests = (
-                    ServiceRequest.query.filter_by(customer=user)
-                    .order_by(ServiceRequest.created_at.desc())
-                    .all()
-                )
-
-        return render_template("customer_dashboard.html", email=email, requests=requests)
+        # Only show the logged-in customer's own requests, newest first.
+        requests = (
+            ServiceRequest.query.filter_by(user_id=current_user.id)
+            .order_by(ServiceRequest.created_at.desc())
+            .all()
+        )
+        return render_template("customer_dashboard.html", requests=requests)
 
     @app.route("/customer/request/new", methods=["GET", "POST"])
     def request_form():
+        if current_user.is_authenticated and current_user.is_staff():
+            flash("Staff accounts can't send service requests. Log out first.", "danger")
+            return redirect(url_for("staff_dashboard"))
+
+        logged_in = current_user.is_authenticated
         errors = []
 
         if request.method == "POST":
             form = request.form
-            errors = check_form(form)
+            errors = check_form(form, logged_in)
 
             if len(errors) == 0:
-                # Find the customer by email, or create a new one.
-                email = form["email"].lower()
-                user = User.query.filter_by(email=email).first()
-                if user is None:
-                    user = User(name=form["name"], email=email, role="customer")
-                    db.session.add(user)
+                if logged_in:
+                    # The request belongs to whoever is logged in.
+                    user = db.session.get(User, current_user.id)
+                else:
+                    email = form["email"].strip().lower()
+                    user = User.query.filter_by(email=email).first()
 
+                    if user is not None and user.password_hash is not None:
+                        # This email already has an account, so they need to log in.
+                        # Otherwise anyone could add requests to someone else's account.
+                        errors.append("An account with this email already exists. Log in first, then send your request.")
+                    elif user is None:
+                        # New customer: make an account.
+                        user = User(name=form["name"].strip(), email=email, role="customer")
+                        db.session.add(user)
+
+                    # New customers, and customers from before accounts existed, get this password.
+                    if len(errors) == 0:
+                        user.set_password(form["password"])
+
+            # Everything checks out, so save the property and the request.
+            if len(errors) == 0:
                 new_property = Property(
                     owner=user,
                     address=form["address"],
@@ -226,7 +327,10 @@ def create_app():
                 )
                 db.session.add(new_request)
                 db.session.commit()
-                session["customer_email"] = email
+
+                # Log new customers in, so they can see My requests right away.
+                if not logged_in:
+                    login_user(user)
                 return redirect(url_for("request_submitted", request_id=new_request.id))
 
         # Show the form (empty the first time, or with the user's answers if there were errors).
@@ -234,13 +338,21 @@ def create_app():
             "request_form.html",
             form=request.form,
             errors=errors,
+            logged_in=logged_in,
             project_types=PROJECT_TYPES,
             conditions=PAVEMENT_CONDITIONS,
         )
 
     @app.route("/customer/request/<int:request_id>/submitted")
+    @login_required
     def request_submitted(request_id):
         service_request = db.get_or_404(ServiceRequest, request_id)
+
+        # Only the customer who sent it (or staff) can see this page.
+        # Everyone else gets "not found", so they can't even tell the request exists.
+        if service_request.user_id != current_user.id and not current_user.is_staff():
+            abort(404)
+
         return render_template(
             "request_submitted.html",
             req=service_request,
@@ -249,6 +361,9 @@ def create_app():
 
     @app.route("/staff/dashboard")
     def staff_dashboard():
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
         # Newest requests first.
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
         # Work out the estimate for each request, if staff have entered the details.
@@ -276,6 +391,9 @@ def create_app():
 
     @app.route("/staff/request/<int:request_id>/estimate", methods=["POST"])
     def update_request_estimate(request_id):
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
         service_request = db.get_or_404(ServiceRequest, request_id)
         thickness = request.form.get("thickness", "").strip()
         crew_size = request.form.get("crew_size", "").strip()
@@ -303,6 +421,9 @@ def create_app():
 
     @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
     def update_request_status(request_id):
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
         service_request = db.get_or_404(ServiceRequest, request_id)
         new_status = request.form.get("status")
 
@@ -315,6 +436,9 @@ def create_app():
 
     @app.route("/staff/request/<int:request_id>/actual-hours", methods=["POST"])
     def update_actual_hours(request_id):
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
         service_request = db.get_or_404(ServiceRequest, request_id)
 
         try:
@@ -335,6 +459,9 @@ def create_app():
 
     @app.route("/staff/completed-jobs.csv")
     def download_completed_jobs():
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
         # Only finished jobs with every detail the model needs can be used for training.
         jobs = ServiceRequest.query.filter(
             ServiceRequest.status == "Completed",

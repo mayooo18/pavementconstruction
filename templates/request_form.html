@@ -21,14 +21,25 @@
         {% endif %}
 
         <form method="post">
+            {% if logged_in %}
+            {# Logged-in customers don't need to type their details again. #}
             <div class="form-section">
                 <h2>About you</h2>
-                <p class="section-note">So we know who to contact about the inspection.</p>
+                <p class="section-note mb-0">Sending as <strong>{{ current_user.name }}</strong> ({{ current_user.email }}). Not you? Log out using the button at the top.</p>
+            </div>
+            {% else %}
+            <div class="form-section">
+                <h2>About you</h2>
+                <p class="section-note">This also makes your account, so you can log in later and check on your request. Already have one? <a href="{{ url_for('login', next=url_for('request_form')) }}">Log in first</a>.</p>
                 <div class="row g-3">
                     <div class="col-md-6"><label class="form-label" for="name">Your name</label><input class="form-control" id="name" name="name" autocomplete="name" value="{{ form.get('name', '') }}"></div>
                     <div class="col-md-6"><label class="form-label" for="email">Email</label><input class="form-control" id="email" name="email" type="email" autocomplete="email" value="{{ form.get('email', '') }}"></div>
+                    {# Passwords are never filled back in, even when there's a mistake. #}
+                    <div class="col-md-6"><label class="form-label" for="password">Make a password</label><input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></div>
+                    <div class="col-md-6"><label class="form-label" for="confirm_password">Type it again</label><input class="form-control" id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8"></div>
                 </div>
             </div>
+            {% endif %}
 
             <div class="form-section">
                 <h2>The property</h2>
