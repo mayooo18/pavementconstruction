@@ -382,6 +382,43 @@ def create_app():
             predictions=predictions,
         )
 
+    @app.route("/staff/add", methods=["GET", "POST"])
+    def add_staff():
+        """Logged-in staff can make accounts for new staff members."""
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
+
+        errors = []
+        form = request.form
+
+        if request.method == "POST":
+            name = form.get("name", "").strip()
+            email = form.get("email", "").strip().lower()
+            password = form.get("password", "")
+
+            if name == "":
+                errors.append("Name is required.")
+            if "@" not in email or "." not in email:
+                errors.append("Enter a valid email address.")
+            elif User.query.filter_by(email=email).first() is not None:
+                errors.append("That email already has an account.")
+            if len(password) < 8:
+                errors.append("Password must be at least 8 characters.")
+            if password != form.get("confirm_password", ""):
+                errors.append("The two passwords don't match.")
+
+            if len(errors) == 0:
+                new_staff = User(name=name, email=email, role="staff")
+                new_staff.set_password(password)
+                db.session.add(new_staff)
+                db.session.commit()
+                flash(f"{name} can now log in as staff.", "success")
+                return redirect(url_for("add_staff"))
+
+        staff = User.query.filter_by(role="staff").order_by(User.name).all()
+        return render_template("add_staff.html", errors=errors, form=form, staff=staff)
+
     @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
     def update_request_status(request_id):
         blocked = block_non_staff()

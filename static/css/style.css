@@ -807,6 +807,18 @@ a.line-item:hover h3 {
     color: var(--ink);
 }
 
+/* List of staff on the Add staff page */
+.staff-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+}
+
+.staff-list li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
     background: var(--ink);

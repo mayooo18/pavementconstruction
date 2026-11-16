@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Add Staff | PaveFlow{% endblock %}
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="login-box">
+            <p class="eyebrow">Staff</p>
+            <h1 class="h2">Add a staff member</h1>
+            <p class="muted">They'll log in with this email and password, and can manage every request.</p>
+
+            {% if errors %}
+            <div class="error-box mt-3" role="alert">
+                <ul>
+                    {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" class="mt-4">
+                <div class="mb-3">
+                    <label class="form-label" for="name">Name</label>
+                    <input class="form-control" id="name" name="name" autocomplete="off" value="{{ form.get('name', '') }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email</label>
+                    <input class="form-control" id="email" name="email" type="email" autocomplete="off" value="{{ form.get('email', '') }}" required>
+                </div>
+                {# Passwords are never filled back in, even when there's a mistake. #}
+                <div class="mb-3">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" for="confirm_password">Type it again</label>
+                    <input class="form-control" id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <button class="btn btn-green w-100" type="submit">Add staff member</button>
+            </form>
+
+            <h2 class="h5 mt-5 mb-3">Current staff</h2>
+            <ul class="staff-list">
+                {% for member in staff %}
+                <li><strong>{{ member.name }}</strong><br><span class="muted small">{{ member.email }}</span></li>
+                {% endfor %}
+            </ul>
+
+            <a class="arrow-link" href="{{ url_for('staff_dashboard') }}">Back to the staff dashboard</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
