@@ -668,21 +668,6 @@ a.line-item:hover h3 {
     margin: 0;
 }
 
-/* Customer's ballpark estimate on the confirmation page */
-.ballpark {
-    background: var(--green-pale);
-    border-radius: 14px;
-    padding: 1.5rem 1.75rem;
-}
-
-.ballpark-hours {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    line-height: 1.2;
-    color: var(--green-dark);
-    margin: 0 0 0.5rem;
-}
-
 /* Big check mark on the confirmation page */
 .done-mark {
     width: 3.25rem;
@@ -784,36 +769,42 @@ a.line-item:hover h3 {
     min-width: 8.5rem;
 }
 
-/* Two number boxes side by side, with the Estimate button underneath */
-.estimate-form {
-    display: grid;
-    grid-template-columns: 5rem 5rem;
-    gap: 0.4rem;
-}
-
-.estimate-hint {
-    display: block;
-    width: 10.5rem;
-    white-space: normal;
-}
-
-.estimate-form button {
-    grid-column: 1 / 3;
-}
-
-/* Box above the staff table about training data */
-.training-box {
-    background: #fff;
-    border: 1px solid var(--line);
+/* Parking lot questions on the request form */
+.lot-questions {
+    background: var(--sand);
     border-radius: 14px;
-    padding: 1rem 1.25rem;
-    max-width: 22rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+    margin-top: 1.5rem;
 }
 
-.estimate-hours {
+.lot-questions h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Predicted condition on the staff dashboard, colored like the city's ratings */
+.rating {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    color: #fff;
+}
+
+.rating-good         { background: #2e7d32; }
+.rating-satisfactory { background: #5f8f2f; }
+.rating-fair         { background: #9a7d00; }
+.rating-poor         { background: #c86f00; }
+.rating-very-poor    { background: #c4501b; }
+.rating-serious      { background: #b02525; }
+.rating-failed       { background: #7b1f1f; }
+
+.rating-score {
     font-family: var(--font-heading);
     font-size: 1.25rem;
-    color: var(--green);
+    color: var(--ink);
 }
 
 /* ---------- Footer ---------- */

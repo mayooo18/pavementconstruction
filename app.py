@@ -11,6 +11,7 @@ from models import (
     PAVEMENT_CONDITIONS,
     PROJECT_TYPES,
     REQUEST_STATUSES,
+    STREET_TYPES,
     Property,
     ServiceRequest,
     User,
@@ -18,63 +19,44 @@ from models import (
 )
 
 
-# Load the work hours model once, when the app starts.
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "work_hours_model.joblib")
-work_hours_model = joblib.load(MODEL_PATH)
+# Load the pavement condition model once, when the app starts.
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "pavement_condition_model.joblib")
+condition_model = joblib.load(MODEL_PATH)
 
-# The model was trained with numbers instead of words (see the notebook).
-TYPE_NUMBERS = {"New driveway": 1, "Driveway replacement": 2, "Parking lot": 3, "Resurfacing": 4}
-CONDITION_NUMBERS = {"Good": 1, "Fair": 2, "Poor": 3}
-
-
-# Customers don't know the thickness or crew size, so the customer ballpark
-# uses a typical value for each project type (the middle of the ranges in the notebook).
-TYPICAL_JOB = {
-    "New driveway": {"thickness": 2.5, "crew_size": 4},
-    "Driveway replacement": {"thickness": 2.5, "crew_size": 4},
-    "Parking lot": {"thickness": 3.5, "crew_size": 6},
-    "Resurfacing": {"thickness": 2, "crew_size": 4},
-}
+# The model was trained with a number for each street type (step 3 of the notebook).
+STREET_TYPE_NUMBERS = {"AV": 0, "BL": 1, "CT": 2, "DR": 3, "LN": 4, "OTHER": 5, "PL": 6, "RD": 7, "ST": 8, "WY": 9}
 
 
-def predict_hours(project_type, square_footage, thickness, crew_size, condition):
-    """Ask the model how many work hours a job will take."""
-    project = pd.DataFrame([{
-        "square_footage": square_footage,
-        "thickness": thickness,
-        "crew_size": crew_size,
-        "type_number": TYPE_NUMBERS[project_type],
-        "condition_number": CONDITION_NUMBERS[condition],
-    }])
-    guess = work_hours_model.predict(project)[0]
-    return round(guess, 1)
+def condition_rating(score):
+    """Turn a 0-100 condition score into the city's rating name."""
+    if score >= 85:
+        return "Good"
+    elif score >= 70:
+        return "Satisfactory"
+    elif score >= 55:
+        return "Fair"
+    elif score >= 40:
+        return "Poor"
+    elif score >= 25:
+        return "Very Poor"
+    elif score >= 10:
+        return "Serious"
+    else:
+        return "Failed"
 
 
-def estimate_hours(service_request):
-    """Staff estimate: return work hours, or None if staff haven't entered thickness and crew size."""
-    if service_request.thickness is None or service_request.crew_size is None:
+def predict_condition(service_request):
+    """Predict a parking lot's condition score. Returns None if the customer didn't give both years."""
+    if service_request.years_since_paved is None or service_request.years_since_sealed is None:
         return None
 
-    return predict_hours(
-        service_request.project_type,
-        service_request.square_footage,
-        service_request.thickness,
-        service_request.crew_size,
-        service_request.pavement_condition,
-    )
-
-
-def ballpark_hours(service_request):
-    """Customer ballpark: the estimate for a typical job of this type and size, rounded to whole hours."""
-    typical = TYPICAL_JOB[service_request.project_type]
-    hours = predict_hours(
-        service_request.project_type,
-        service_request.square_footage,
-        typical["thickness"],
-        typical["crew_size"],
-        service_request.pavement_condition,
-    )
-    return round(hours)
+    lot = pd.DataFrame([{
+        "years_since_repaved": service_request.years_since_paved,
+        "years_since_sealed": service_request.years_since_sealed,
+        "street_type_number": STREET_TYPE_NUMBERS[service_request.street_type or "OTHER"],
+    }])
+    score = round(condition_model.predict(lot)[0])
+    return {"score": score, "rating": condition_rating(score)}
 
 
 def add_missing_columns():
@@ -82,13 +64,21 @@ def add_missing_columns():
     rows = db.session.execute(db.text("PRAGMA table_info(service_requests)")).fetchall()
     column_names = [row[1] for row in rows]
 
-    if "thickness" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN thickness FLOAT"))
-    if "crew_size" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN crew_size INTEGER"))
-    if "actual_hours" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN actual_hours FLOAT"))
+    if "years_since_paved" not in column_names:
+        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_paved INTEGER"))
+    if "years_since_sealed" not in column_names:
+        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_sealed INTEGER"))
+    if "street_type" not in column_names:
+        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN street_type VARCHAR(10)"))
     db.session.commit()
+
+
+def years_or_none(text):
+    """Turn a typed number of years into an int, or None if it was left blank."""
+    text = text.strip()
+    if text == "":
+        return None
+    return int(text)
 
 
 def check_form(form, logged_in):
@@ -133,6 +123,16 @@ def check_form(form, logged_in):
 
     if form.get("pavement_condition") not in PAVEMENT_CONDITIONS:
         errors.append("Choose a pavement condition.")
+
+    # Parking lot questions are optional, but must be whole numbers if filled in.
+    if form.get("project_type") == "Parking lot":
+        for field, label in [("years_since_paved", "Years since it was paved"), ("years_since_sealed", "Years since it was sealed")]:
+            years = form.get(field, "").strip()
+            if years and (not years.isdigit() or int(years) > 100):
+                errors.append(label + " must be a whole number from 0 to 100.")
+        street_type = form.get("street_type", "")
+        if street_type and street_type not in STREET_TYPES:
+            errors.append("Choose a street type from the list.")
 
     inspection_date = form.get("preferred_inspection_date", "")
     if inspection_date and inspection_date < date.today().isoformat():
@@ -325,6 +325,12 @@ def create_app():
                     preferred_inspection_date=inspection_date,
                     additional_details=form.get("additional_details"),
                 )
+                # Only parking lots get the condition questions.
+                if new_request.project_type == "Parking lot":
+                    new_request.years_since_paved = years_or_none(form.get("years_since_paved", ""))
+                    new_request.years_since_sealed = years_or_none(form.get("years_since_sealed", ""))
+                    new_request.street_type = form.get("street_type") or "OTHER"
+
                 db.session.add(new_request)
                 db.session.commit()
 
@@ -341,6 +347,7 @@ def create_app():
             logged_in=logged_in,
             project_types=PROJECT_TYPES,
             conditions=PAVEMENT_CONDITIONS,
+            street_types=STREET_TYPES,
         )
 
     @app.route("/customer/request/<int:request_id>/submitted")
@@ -353,11 +360,7 @@ def create_app():
         if service_request.user_id != current_user.id and not current_user.is_staff():
             abort(404)
 
-        return render_template(
-            "request_submitted.html",
-            req=service_request,
-            ballpark=ballpark_hours(service_request),
-        )
+        return render_template("request_submitted.html", req=service_request)
 
     @app.route("/staff/dashboard")
     def staff_dashboard():
@@ -366,58 +369,18 @@ def create_app():
             return blocked
         # Newest requests first.
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
-        # Work out the estimate for each request, if staff have entered the details.
-        estimates = {}
-        for service_request in requests:
-            estimates[service_request.id] = estimate_hours(service_request)
 
-        # Count finished jobs that are ready to use as training data.
-        training_jobs = 0
+        # Predicted condition for each parking lot that has both years filled in.
+        predictions = {}
         for service_request in requests:
-            if (
-                service_request.status == "Completed"
-                and service_request.actual_hours is not None
-                and estimates[service_request.id] is not None
-            ):
-                training_jobs += 1
+            predictions[service_request.id] = predict_condition(service_request)
 
         return render_template(
             "staff_dashboard.html",
             requests=requests,
             statuses=REQUEST_STATUSES,
-            estimates=estimates,
-            training_jobs=training_jobs,
+            predictions=predictions,
         )
-
-    @app.route("/staff/request/<int:request_id>/estimate", methods=["POST"])
-    def update_request_estimate(request_id):
-        blocked = block_non_staff()
-        if blocked:
-            return blocked
-        service_request = db.get_or_404(ServiceRequest, request_id)
-        thickness = request.form.get("thickness", "").strip()
-        crew_size = request.form.get("crew_size", "").strip()
-
-        # Thickness can have a decimal, like 2.5. Crew size must be a whole number.
-        try:
-            thickness = float(thickness)
-        except ValueError:
-            thickness = 0
-
-        if thickness < 0.5 or thickness > 12:
-            flash(f"Request #{request_id}: thickness must be a number from 0.5 to 12 inches.", "danger")
-        elif not crew_size.isdigit() or int(crew_size) < 1 or int(crew_size) > 20:
-            flash(f"Request #{request_id}: crew size must be a whole number from 1 to 20.", "danger")
-        else:
-            service_request.thickness = thickness
-            service_request.crew_size = int(crew_size)
-            db.session.commit()
-            flash(
-                f"Request #{request_id}: estimated {estimate_hours(service_request)} work hours.",
-                "success",
-            )
-
-        return redirect(url_for("staff_dashboard"))
 
     @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
     def update_request_status(request_id):
@@ -433,62 +396,6 @@ def create_app():
             flash(f"Request #{request_id} marked as {new_status}.", "success")
 
         return redirect(url_for("staff_dashboard"))
-
-    @app.route("/staff/request/<int:request_id>/actual-hours", methods=["POST"])
-    def update_actual_hours(request_id):
-        blocked = block_non_staff()
-        if blocked:
-            return blocked
-        service_request = db.get_or_404(ServiceRequest, request_id)
-
-        try:
-            hours = float(request.form.get("actual_hours", ""))
-        except ValueError:
-            hours = 0
-
-        if service_request.status != "Completed":
-            flash(f"Request #{request_id}: mark the job Completed before entering actual hours.", "danger")
-        elif hours < 0.5 or hours > 1000:
-            flash(f"Request #{request_id}: actual hours must be a number from 0.5 to 1000.", "danger")
-        else:
-            service_request.actual_hours = hours
-            db.session.commit()
-            flash(f"Request #{request_id}: saved {hours} actual work hours.", "success")
-
-        return redirect(url_for("staff_dashboard"))
-
-    @app.route("/staff/completed-jobs.csv")
-    def download_completed_jobs():
-        blocked = block_non_staff()
-        if blocked:
-            return blocked
-        # Only finished jobs with every detail the model needs can be used for training.
-        jobs = ServiceRequest.query.filter(
-            ServiceRequest.status == "Completed",
-            ServiceRequest.actual_hours.isnot(None),
-            ServiceRequest.thickness.isnot(None),
-            ServiceRequest.crew_size.isnot(None),
-        ).all()
-
-        # Same columns as ml/past_projects.csv, so the notebook can train on it.
-        rows = []
-        for job in jobs:
-            rows.append({
-                "project_type": job.project_type,
-                "square_footage": job.square_footage,
-                "thickness": job.thickness,
-                "crew_size": job.crew_size,
-                "condition": job.pavement_condition,
-                "work_hours": job.actual_hours,
-            })
-        columns = ["project_type", "square_footage", "thickness", "crew_size", "condition", "work_hours"]
-        csv_text = pd.DataFrame(rows, columns=columns).to_csv(index=False)
-
-        return app.response_class(
-            csv_text,
-            mimetype="text/csv",
-            headers={"Content-Disposition": "attachment; filename=completed_jobs.csv"},
-        )
 
     return app
 

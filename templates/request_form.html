@@ -74,6 +74,23 @@
                     <div class="col-md-6"><label class="form-label" for="preferred_inspection_date">Preferred inspection date</label><input class="form-control" id="preferred_inspection_date" name="preferred_inspection_date" type="date" value="{{ form.get('preferred_inspection_date', '') }}"></div>
                     <div class="col-12"><label class="form-label" for="additional_details">Anything else we should know?</label><textarea class="form-control" id="additional_details" name="additional_details" rows="4" placeholder="Cracks, drainage problems, a deadline, gate codes...">{{ form.get('additional_details', '') }}</textarea></div>
                 </div>
+
+                {# Only shown for parking lots. Staff use these answers to predict the lot's condition. #}
+                <div class="lot-questions" id="lot-questions" {% if form.get('project_type') != 'Parking lot' %}hidden{% endif %}>
+                    <h3>About your parking lot</h3>
+                    <p class="section-note">These help us estimate the lot's condition before the inspection. Not sure? Leave them blank.</p>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label" for="years_since_paved">Years since it was paved</label><input class="form-control" id="years_since_paved" name="years_since_paved" type="number" min="0" max="100" placeholder="For example, 12" value="{{ form.get('years_since_paved', '') }}"></div>
+                        <div class="col-md-4"><label class="form-label" for="years_since_sealed">Years since it was sealcoated</label><input class="form-control" id="years_since_sealed" name="years_since_sealed" type="number" min="0" max="100" placeholder="For example, 3" value="{{ form.get('years_since_sealed', '') }}"></div>
+                        <div class="col-md-4"><label class="form-label" for="street_type">The lot is on a...</label>
+                            <select class="form-select" id="street_type" name="street_type">
+                                {% for code, label in street_types.items() %}
+                                <option value="{{ code }}" {% if form.get('street_type', 'OTHER') == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="form-actions">
@@ -83,4 +100,17 @@
         </form>
     </div>
 </div>
+
+<script>
+    // Show the parking lot questions only when "Parking lot" is picked.
+    const projectType = document.getElementById("project_type");
+    const lotQuestions = document.getElementById("lot-questions");
+
+    function showLotQuestions() {
+        lotQuestions.hidden = projectType.value !== "Parking lot";
+    }
+
+    projectType.addEventListener("change", showLotQuestions);
+    showLotQuestions();
+</script>
 {% endblock %}

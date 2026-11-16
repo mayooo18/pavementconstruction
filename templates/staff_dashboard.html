@@ -8,17 +8,12 @@
         <div>
             <p class="eyebrow">Staff</p>
             <h1 class="mb-2">Service requests</h1>
-            <p class="muted mb-0">Review customer requests, estimate work hours, and update each request's status.</p>
-        </div>
-        <div class="training-box">
-            <p class="mb-1"><strong>{{ training_jobs }}</strong> finished job{{ "" if training_jobs == 1 else "s" }} ready for model training</p>
-            <p class="muted small mb-2">Completed jobs with thickness, crew size and actual hours.</p>
-            <a class="btn btn-sm btn-outline" href="{{ url_for('download_completed_jobs') }}">Download completed jobs (CSV)</a>
+            <p class="muted mb-0">Review customer requests and update each request's status.</p>
         </div>
     </div>
     <div class="table-box table-responsive">
         <table class="table align-middle dashboard-table">
-            <thead><tr><th>#</th><th>Submitted</th><th>Customer</th><th>Property</th><th>Project</th><th>Sq ft</th><th>Condition</th><th>Inspection</th><th>Work hour estimate</th><th>Status</th></tr></thead>
+            <thead><tr><th>#</th><th>Submitted</th><th>Customer</th><th>Property</th><th>Project</th><th>Sq ft</th><th>Condition</th><th>Inspection</th><th>Predicted condition</th><th>Status</th></tr></thead>
             <tbody>
                 {% for req in requests %}
                 <tr>
@@ -31,17 +26,17 @@
                     <td>{{ req.pavement_condition }}</td>
                     <td>{{ req.preferred_inspection_date.strftime("%b %d, %Y") if req.preferred_inspection_date else "—" }}</td>
                     <td>
-                        {% if estimates[req.id] is not none %}
-                        <span class="estimate-hours">{{ estimates[req.id] }} hours</span><br>
-                        <small class="muted">Estimate, not a guarantee</small>
+                        {# From the pavement condition model. Only parking lots get a prediction. #}
+                        {% set prediction = predictions[req.id] %}
+                        {% if prediction %}
+                        <span class="rating rating-{{ prediction.rating|lower|replace(' ', '-') }}">{{ prediction.rating }}</span><br>
+                        <span class="rating-score">{{ prediction.score }}</span><small class="muted"> / 100</small><br>
+                        <small class="muted">Paved {{ req.years_since_paved }} yrs ago, sealed {{ req.years_since_sealed }}</small>
+                        {% elif req.project_type == "Parking lot" %}
+                        <small class="muted">Customer didn't know the years</small>
                         {% else %}
-                        <small class="muted estimate-hint">Enter thickness and crew size</small>
+                        <small class="muted">Parking lots only</small>
                         {% endif %}
-                        <form class="estimate-form mt-2" method="post" action="{{ url_for('update_request_estimate', request_id=req.id) }}">
-                            <input class="form-control form-control-sm" type="number" name="thickness" step="0.5" min="0.5" max="12" placeholder="Inches" value="{{ req.thickness if req.thickness is not none else '' }}" aria-label="Thickness in inches for request {{ req.id }}" required>
-                            <input class="form-control form-control-sm" type="number" name="crew_size" step="1" min="1" max="20" placeholder="Crew" value="{{ req.crew_size if req.crew_size is not none else '' }}" aria-label="Crew size for request {{ req.id }}" required>
-                            <button class="btn btn-sm btn-outline" type="submit">Estimate</button>
-                        </form>
                     </td>
                     <td>
                         <span class="status status-{{ req.status|lower }}">{{ req.status }}</span>
@@ -51,14 +46,6 @@
                             </select>
                             <button class="btn btn-sm btn-outline" type="submit">Update</button>
                         </form>
-                        {% if req.status == "Completed" %}
-                        {# How long the job really took. This becomes training data for the model. #}
-                        <form class="d-grid gap-2 mt-3" method="post" action="{{ url_for('update_actual_hours', request_id=req.id) }}">
-                            <label class="small muted" for="actual-{{ req.id }}">Actual work hours</label>
-                            <input class="form-control form-control-sm" id="actual-{{ req.id }}" type="number" name="actual_hours" step="0.5" min="0.5" max="1000" placeholder="Hours" value="{{ req.actual_hours if req.actual_hours is not none else '' }}" required>
-                            <button class="btn btn-sm btn-outline" type="submit">Save hours</button>
-                        </form>
-                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

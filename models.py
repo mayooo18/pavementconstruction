@@ -11,6 +11,20 @@ PROJECT_TYPES = ["New driveway", "Driveway replacement", "Parking lot", "Resurfa
 PAVEMENT_CONDITIONS = ["Good", "Fair", "Poor"]
 REQUEST_STATUSES = ["Submitted", "Inspected", "Quoted", "Scheduled", "Completed", "Cancelled"]
 
+# The kind of street a parking lot is on. The code is what the condition model was trained on.
+STREET_TYPES = {
+    "ST": "Street",
+    "AV": "Avenue",
+    "DR": "Drive",
+    "RD": "Road",
+    "BL": "Boulevard",
+    "CT": "Court",
+    "WY": "Way",
+    "PL": "Place",
+    "LN": "Lane",
+    "OTHER": "Other or not sure",
+}
+
 
 # UserMixin gives the User class what Flask-Login needs to log people in.
 class User(UserMixin, db.Model):
@@ -75,12 +89,10 @@ class ServiceRequest(db.Model):
     preferred_inspection_date = db.Column(db.Date, nullable=True)
     additional_details = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(30), nullable=False, default="Submitted")
-    # Staff fill these in after the inspection so the model can estimate work hours.
-    thickness = db.Column(db.Float, nullable=True)
-    crew_size = db.Column(db.Integer, nullable=True)
-    # How long the job really took. Staff enter it when the job is Completed,
-    # and it becomes training data for the work hours model.
-    actual_hours = db.Column(db.Float, nullable=True)
+    # Parking lot questions for the pavement condition model. Blank if the customer didn't know.
+    years_since_paved = db.Column(db.Integer, nullable=True)
+    years_since_sealed = db.Column(db.Integer, nullable=True)
+    street_type = db.Column(db.String(10), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     customer = db.relationship("User", back_populates="service_requests")

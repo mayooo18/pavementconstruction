@@ -8,13 +8,7 @@
             <h1>Thanks, {{ req.customer.name }}. We got your request.</h1>
             <p class="lead mt-3">Our staff will review it and contact you at <strong>{{ req.customer.email }}</strong> to schedule your inspection.</p>
 
-            <div class="ballpark mt-5">
-                <p class="eyebrow mb-1">Ballpark estimate</p>
-                <p class="ballpark-hours">About {{ ballpark }} work hour{{ "" if ballpark == 1 else "s" }}</p>
-                <p class="muted mb-0">Based on typical {{ req.project_type|lower }} jobs of about {{ "{:,}".format(req.square_footage) }} sq ft in {{ req.pavement_condition|lower }} condition. Your exact estimate comes after the inspection, once we've measured and checked the pavement.</p>
-            </div>
-
-            <div class="request-card mt-4">
+            <div class="request-card mt-5">
                 <div class="request-card-head">
                     <h2>Request #{{ req.id }}</h2>
                     <span class="status status-{{ req.status|lower }}">{{ req.status }}</span>
