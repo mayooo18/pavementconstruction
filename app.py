@@ -195,7 +195,7 @@ def create_app():
                     return redirect(url_for("staff_dashboard"))
                 return redirect(url_for("customer_dashboard"))
 
-            error = "That email and password don't match an account."
+            error = "That email or username and password don't match an account."
 
         return render_template("login.html", error=error, email=email)
 

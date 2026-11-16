@@ -14,8 +14,9 @@
 
             <form method="post" class="mt-4">
                 <div class="mb-3">
-                    <label class="form-label" for="email">Email</label>
-                    <input class="form-control" id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required>
+                    {# Customers use their email. The admin staff account uses the username "admin". #}
+                    <label class="form-label" for="email">Email or username</label>
+                    <input class="form-control" id="email" name="email" type="text" autocomplete="username" value="{{ email }}" required>
                 </div>
                 <div class="mb-4">
                     <label class="form-label" for="password">Password</label>
