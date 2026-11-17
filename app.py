@@ -11,7 +11,6 @@ from models import (
     PAVEMENT_CONDITIONS,
     PROJECT_TYPES,
     REQUEST_STATUSES,
-    STREET_TYPES,
     Property,
     ServiceRequest,
     User,
@@ -22,9 +21,6 @@ from models import (
 # Load the pavement condition model once, when the app starts.
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "pavement_condition_model.joblib")
 condition_model = joblib.load(MODEL_PATH)
-
-# The model was trained with a number for each street type (step 3 of the notebook).
-STREET_TYPE_NUMBERS = {"AV": 0, "BL": 1, "CT": 2, "DR": 3, "LN": 4, "OTHER": 5, "PL": 6, "RD": 7, "ST": 8, "WY": 9}
 
 
 def condition_rating(score):
@@ -53,7 +49,7 @@ def predict_condition(service_request):
     lot = pd.DataFrame([{
         "years_since_repaved": service_request.years_since_paved,
         "years_since_sealed": service_request.years_since_sealed,
-        "street_type_number": STREET_TYPE_NUMBERS[service_request.street_type or "OTHER"],
+        "square_footage": service_request.square_footage,
     }])
     score = round(condition_model.predict(lot)[0])
     return {"score": score, "rating": condition_rating(score)}
@@ -68,8 +64,6 @@ def add_missing_columns():
         db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_paved INTEGER"))
     if "years_since_sealed" not in column_names:
         db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_sealed INTEGER"))
-    if "street_type" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN street_type VARCHAR(10)"))
     db.session.commit()
 
 
@@ -130,9 +124,6 @@ def check_form(form, logged_in):
             years = form.get(field, "").strip()
             if years and (not years.isdigit() or int(years) > 100):
                 errors.append(label + " must be a whole number from 0 to 100.")
-        street_type = form.get("street_type", "")
-        if street_type and street_type not in STREET_TYPES:
-            errors.append("Choose a street type from the list.")
 
     inspection_date = form.get("preferred_inspection_date", "")
     if inspection_date and inspection_date < date.today().isoformat():
@@ -329,7 +320,6 @@ def create_app():
                 if new_request.project_type == "Parking lot":
                     new_request.years_since_paved = years_or_none(form.get("years_since_paved", ""))
                     new_request.years_since_sealed = years_or_none(form.get("years_since_sealed", ""))
-                    new_request.street_type = form.get("street_type") or "OTHER"
 
                 db.session.add(new_request)
                 db.session.commit()
@@ -347,7 +337,6 @@ def create_app():
             logged_in=logged_in,
             project_types=PROJECT_TYPES,
             conditions=PAVEMENT_CONDITIONS,
-            street_types=STREET_TYPES,
         )
 
     @app.route("/customer/request/<int:request_id>/submitted")
