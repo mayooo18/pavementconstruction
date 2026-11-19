@@ -5,3 +5,5 @@ instance/
 .DS_Store
 .ipynb_checkpoints/
 .claude/
+.vscode/
+/launch.json
