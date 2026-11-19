@@ -18,7 +18,9 @@ from models import (
 )
 
 
-# Load the pavement condition model once, when the app starts.
+# Pavement condition model
+
+# Load the model once, when the app starts. It's trained in ml/pavement_condition_model.ipynb.
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "pavement_condition_model.joblib")
 condition_model = joblib.load(MODEL_PATH)
 
@@ -46,26 +48,32 @@ def predict_condition(service_request):
     if service_request.years_since_paved is None or service_request.years_since_sealed is None:
         return None
 
+    # Model input: the same three columns the notebook trains on.
     lot = pd.DataFrame([{
         "years_since_repaved": service_request.years_since_paved,
         "years_since_sealed": service_request.years_since_sealed,
         "square_footage": service_request.square_footage,
     }])
+
+    # Model output: a condition score from 0 (failed) to 100 (new).
     score = round(condition_model.predict(lot)[0])
     return {"score": score, "rating": condition_rating(score)}
 
+
+# Database
 
 def add_missing_columns():
     """Databases made before these columns existed don't have them, so add any that are missing."""
     rows = db.session.execute(db.text("PRAGMA table_info(service_requests)")).fetchall()
     column_names = [row[1] for row in rows]
 
-    if "years_since_paved" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_paved INTEGER"))
-    if "years_since_sealed" not in column_names:
-        db.session.execute(db.text("ALTER TABLE service_requests ADD COLUMN years_since_sealed INTEGER"))
+    for column in ["years_since_paved", "years_since_sealed"]:
+        if column not in column_names:
+            db.session.execute(db.text(f"ALTER TABLE service_requests ADD COLUMN {column} INTEGER"))
     db.session.commit()
 
+
+# Service request form
 
 def years_or_none(text):
     """Turn a typed number of years into an int, or None if it was left blank."""
@@ -120,7 +128,11 @@ def check_form(form, logged_in):
 
     # Parking lot questions are optional, but must be whole numbers if filled in.
     if form.get("project_type") == "Parking lot":
-        for field, label in [("years_since_paved", "Years since it was paved"), ("years_since_sealed", "Years since it was sealed")]:
+        year_fields = [
+            ("years_since_paved", "Years since it was paved"),
+            ("years_since_sealed", "Years since it was sealed"),
+        ]
+        for field, label in year_fields:
             years = form.get(field, "").strip()
             if years and (not years.isdigit() or int(years) > 100):
                 errors.append(label + " must be a whole number from 0 to 100.")
@@ -132,6 +144,65 @@ def check_form(form, logged_in):
     return errors
 
 
+def get_or_create_customer(form):
+    """Find or make the account for someone sending a request without logging in.
+
+    Returns (user, error). error is None if it worked.
+    """
+    email = form["email"].strip().lower()
+    user = User.query.filter_by(email=email).first()
+
+    # This email already has an account, so they need to log in.
+    # Otherwise anyone could add requests to someone else's account.
+    if user is not None and user.password_hash is not None:
+        return None, "An account with this email already exists. Log in first, then send your request."
+
+    # New customer: make an account.
+    if user is None:
+        user = User(name=form["name"].strip(), email=email, role="customer")
+        db.session.add(user)
+
+    # New customers, and customers from before accounts existed, get this password.
+    user.set_password(form["password"])
+    return user, None
+
+
+def save_request(form, user):
+    """Save the property and the service request from a checked form. Returns the new request."""
+    new_property = Property(
+        owner=user,
+        address=form["address"],
+        city=form["city"],
+        state=form["state"].upper(),
+        zip_code=form["zip_code"],
+    )
+
+    inspection_date = None
+    if form.get("preferred_inspection_date"):
+        inspection_date = date.fromisoformat(form["preferred_inspection_date"])
+
+    new_request = ServiceRequest(
+        customer=user,
+        property=new_property,
+        project_type=form["project_type"],
+        square_footage=int(form["square_footage"]),
+        pavement_condition=form["pavement_condition"],
+        preferred_inspection_date=inspection_date,
+        additional_details=form.get("additional_details"),
+    )
+
+    # Only parking lots get the condition questions.
+    if new_request.project_type == "Parking lot":
+        new_request.years_since_paved = years_or_none(form.get("years_since_paved", ""))
+        new_request.years_since_sealed = years_or_none(form.get("years_since_sealed", ""))
+
+    db.session.add(new_request)
+    db.session.commit()
+    return new_request
+
+
+# The app
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
@@ -139,12 +210,17 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
-
     with app.app_context():
         db.create_all()
         add_missing_columns()
 
-    # ---------- Logging in ----------
+    # Lets every page use {{ current_year }}, for the footer.
+    @app.context_processor
+    def add_current_year():
+        return {"current_year": date.today().year}
+
+    # ---------- Login setup ----------
+
     login_manager = LoginManager()
     login_manager.login_view = "login"  # where to send people who need to log in
     login_manager.login_message = "Please log in to see that page."
@@ -162,6 +238,30 @@ def create_app():
             return None
         flash("Please log in with a staff account to see that page.", "danger")
         return redirect(url_for("login"))
+
+    # ---------- Public pages ----------
+
+    @app.route("/")
+    def home():
+        return render_template("home.html")
+
+    @app.route("/services")
+    def services():
+        return render_template("services.html")
+
+    @app.route("/about")
+    def about():
+        return render_template("about.html")
+
+    @app.route("/contact")
+    def contact():
+        return render_template("contact.html")
+
+    @app.route("/faq")
+    def faq():
+        return render_template("faq.html")
+
+    # ---------- Logging in and out ----------
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -196,53 +296,7 @@ def create_app():
         flash("You're logged out.", "success")
         return redirect(url_for("home"))
 
-    @app.cli.command("create-staff")
-    def create_staff():
-        """Make a staff account from the terminal: flask --app app:create_app create-staff"""
-        name = input("Name: ").strip()
-        email = input("Email: ").strip().lower()
-        password = getpass("Password (at least 8 characters): ")
-
-        if name == "" or "@" not in email:
-            print("Enter a name and a valid email.")
-            return
-        if len(password) < 8:
-            print("The password must be at least 8 characters.")
-            return
-
-        user = User.query.filter_by(email=email).first()
-        if user is None:
-            user = User(name=name, email=email)
-            db.session.add(user)
-        user.role = "staff"
-        user.set_password(password)
-        db.session.commit()
-        print(f"Staff account ready for {email}. Log in at /login.")
-
-    @app.route("/")
-    def home():
-        return render_template("home.html")
-
-    @app.route("/services")
-    def services():
-        return render_template("services.html")
-
-    @app.route("/about")
-    def about():
-        return render_template("about.html")
-
-    @app.route("/contact")
-    def contact():
-        return render_template("contact.html")
-
-    @app.route("/faq")
-    def faq():
-        return render_template("faq.html")
-
-    # Lets every page use {{ current_year }}, for the footer.
-    @app.context_processor
-    def add_current_year():
-        return {"current_year": date.today().year}
+    # ---------- Customer pages ----------
 
     @app.route("/customer/dashboard")
     @login_required
@@ -272,58 +326,18 @@ def create_app():
             form = request.form
             errors = check_form(form, logged_in)
 
-            if len(errors) == 0:
+            # Work out whose request this is.
+            if not errors:
                 if logged_in:
-                    # The request belongs to whoever is logged in.
                     user = db.session.get(User, current_user.id)
                 else:
-                    email = form["email"].strip().lower()
-                    user = User.query.filter_by(email=email).first()
+                    user, error = get_or_create_customer(form)
+                    if error:
+                        errors.append(error)
 
-                    if user is not None and user.password_hash is not None:
-                        # This email already has an account, so they need to log in.
-                        # Otherwise anyone could add requests to someone else's account.
-                        errors.append("An account with this email already exists. Log in first, then send your request.")
-                    elif user is None:
-                        # New customer: make an account.
-                        user = User(name=form["name"].strip(), email=email, role="customer")
-                        db.session.add(user)
-
-                    # New customers, and customers from before accounts existed, get this password.
-                    if len(errors) == 0:
-                        user.set_password(form["password"])
-
-            # Everything checks out, so save the property and the request.
-            if len(errors) == 0:
-                new_property = Property(
-                    owner=user,
-                    address=form["address"],
-                    city=form["city"],
-                    state=form["state"].upper(),
-                    zip_code=form["zip_code"],
-                )
-
-                inspection_date = None
-                if form.get("preferred_inspection_date"):
-                    inspection_date = date.fromisoformat(form["preferred_inspection_date"])
-
-                new_request = ServiceRequest(
-                    customer=user,
-                    property=new_property,
-                    project_type=form["project_type"],
-                    square_footage=int(form["square_footage"]),
-                    pavement_condition=form["pavement_condition"],
-                    preferred_inspection_date=inspection_date,
-                    additional_details=form.get("additional_details"),
-                )
-                # Only parking lots get the condition questions.
-                if new_request.project_type == "Parking lot":
-                    new_request.years_since_paved = years_or_none(form.get("years_since_paved", ""))
-                    new_request.years_since_sealed = years_or_none(form.get("years_since_sealed", ""))
-
-                db.session.add(new_request)
-                db.session.commit()
-
+            # Everything checks out, so save it.
+            if not errors:
+                new_request = save_request(form, user)
                 # Log new customers in, so they can see My requests right away.
                 if not logged_in:
                     login_user(user)
@@ -351,18 +365,19 @@ def create_app():
 
         return render_template("request_submitted.html", req=service_request)
 
+    # ---------- Staff pages ----------
+
     @app.route("/staff/dashboard")
     def staff_dashboard():
         blocked = block_non_staff()
         if blocked:
             return blocked
+
         # Newest requests first.
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
 
-        # Predicted condition for each parking lot that has both years filled in.
-        predictions = {}
-        for service_request in requests:
-            predictions[service_request.id] = predict_condition(service_request)
+        # Predicted condition for each request (None unless it's a parking lot with both years filled in).
+        predictions = {req.id: predict_condition(req) for req in requests}
 
         return render_template(
             "staff_dashboard.html",
@@ -370,6 +385,22 @@ def create_app():
             statuses=REQUEST_STATUSES,
             predictions=predictions,
         )
+
+    @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
+    def update_request_status(request_id):
+        blocked = block_non_staff()
+        if blocked:
+            return blocked
+
+        service_request = db.get_or_404(ServiceRequest, request_id)
+        new_status = request.form.get("status")
+
+        if new_status in REQUEST_STATUSES:
+            service_request.status = new_status
+            db.session.commit()
+            flash(f"Request #{request_id} marked as {new_status}.", "success")
+
+        return redirect(url_for("staff_dashboard"))
 
     @app.route("/staff/add", methods=["GET", "POST"])
     def add_staff():
@@ -397,7 +428,7 @@ def create_app():
             if password != form.get("confirm_password", ""):
                 errors.append("The two passwords don't match.")
 
-            if len(errors) == 0:
+            if not errors:
                 new_staff = User(name=name, email=email, role="staff")
                 new_staff.set_password(password)
                 db.session.add(new_staff)
@@ -408,20 +439,30 @@ def create_app():
         staff = User.query.filter_by(role="staff").order_by(User.name).all()
         return render_template("add_staff.html", errors=errors, form=form, staff=staff)
 
-    @app.route("/staff/request/<int:request_id>/status", methods=["POST"])
-    def update_request_status(request_id):
-        blocked = block_non_staff()
-        if blocked:
-            return blocked
-        service_request = db.get_or_404(ServiceRequest, request_id)
-        new_status = request.form.get("status")
+    # ---------- Terminal commands ----------
 
-        if new_status in REQUEST_STATUSES:
-            service_request.status = new_status
-            db.session.commit()
-            flash(f"Request #{request_id} marked as {new_status}.", "success")
+    @app.cli.command("create-staff")
+    def create_staff():
+        """Make a staff account from the terminal: flask --app app:create_app create-staff"""
+        name = input("Name: ").strip()
+        email = input("Email: ").strip().lower()
+        password = getpass("Password (at least 8 characters): ")
 
-        return redirect(url_for("staff_dashboard"))
+        if name == "" or "@" not in email:
+            print("Enter a name and a valid email.")
+            return
+        if len(password) < 8:
+            print("The password must be at least 8 characters.")
+            return
+
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            user = User(name=name, email=email)
+            db.session.add(user)
+        user.role = "staff"
+        user.set_password(password)
+        db.session.commit()
+        print(f"Staff account ready for {email}. Log in at /login.")
 
     return app
 
